@@ -19,14 +19,7 @@
 #define COLOR_YELLOW  0xFFE0
 #define COLOR_WHITE   0xFFFF
 
-/* 数据结构定义，用于从中断传递数据到LCD任务 */
-typedef struct {
-    float current_ua;   // 电流值 (uA)
-    float voltage_v;    // 电压值 (V)
-} LCDData_t;
 
-/* 外部声明队列句柄，由LCD任务创建 */
-extern QueueHandle_t xLCDQueue;
 
 /* 字体参数 */
 #define FONT_0806      8 /* 8x6 像素字体 */
