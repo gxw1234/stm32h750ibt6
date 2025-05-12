@@ -807,14 +807,12 @@ void LCD_Task(void *pvParameters)
     uint16_t text_x = (LCD_WIDTH - 12*7)/2;  // 居中显示 "ST7789" 7个字符
     uint16_t text_y = (LCD_HEIGHT - 12)/2 - 50; // 在屏幕中心偏上一点
     
-    // 显示多种字体大小的标题
-    LCD_Show_String((LCD_WIDTH - 16*5)/2, text_y - 20, "Current display", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+    // // 显示多种字体大小的标题
+    // LCD_Show_String((LCD_WIDTH - 16*2)/2, text_y - 20, "Current ", COLOR_WHITE, COLOR_BLACK, FONT_1608);
     
-    // 显示中等大小的字体
-    LCD_Show_String((LCD_WIDTH - 24*4)/2, text_y + 20, "LCD", COLOR_GREEN, COLOR_BLACK, FONT_2412);
-    
-    // 显示大号字体中的DEMO文本
-    LCD_Show_String((LCD_WIDTH - 24*4)/2, text_y + 55, "DEMO", COLOR_CYAN, COLOR_BLACK, FONT_2412);
+    // LCD_Show_String((LCD_WIDTH - 16*2)/2, text_y - 40, "Voltage ", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+
+
     
     // 显示各种字体大小示例
     LCD_Draw_Line(0, text_y + 90, LCD_WIDTH-1, text_y + 90, COLOR_WHITE); // 水平分隔线
@@ -856,12 +854,11 @@ void LCD_Task(void *pvParameters)
         if(sec >= 60) { sec = 0; min++; }
         if(min >= 60) { min = 0; hour++; }
         if(hour >= 24) { hour = 0; }
+        // // 清除上一次显示的时间
+        // LCD_Fill_Rect(time_x - 5, time_y - 2, LCD_WIDTH - 2, time_y + 14, COLOR_BLACK);
         
-        // 清除上一次显示的时间
-        LCD_Fill_Rect(time_x - 5, time_y - 2, LCD_WIDTH - 2, time_y + 14, COLOR_BLACK);
-        
-        // 显示新的时间
-        LCD_Show_Time(time_x, time_y, hour, min, sec, COLOR_WHITE, COLOR_BLACK, FONT_1206);
+        // // 显示新的时间
+        // LCD_Show_Time(time_x, time_y, hour, min, sec, COLOR_WHITE, COLOR_BLACK, FONT_1206);
         
         // 每秒更新一次
         vTaskDelay(1000 / portTICK_PERIOD_MS);

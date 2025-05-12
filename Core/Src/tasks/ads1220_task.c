@@ -1,4 +1,5 @@
 #include "tasks/ads1220_task.h"
+#include "tasks/lcd_task.h"  /* 包含 LCD 函数声明 */
 #include <stdio.h>
 
 #define SPI_CS1_LOW()       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET)
@@ -51,7 +52,7 @@ static float Convert_ADC_To_Voltage(uint32_t adc_value)
 void ADS1220_Task(void *argument)
 {
 
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
+    vTaskDelay(3000 / portTICK_PERIOD_MS);
     ADS1220_Init();
 
     SPI_CS1_LOW();
@@ -232,18 +233,47 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         raw_voltage_sum += voltage; // 累加原始电压值
         sample_count++;
 
-        /* 每1000次采样计算一次平均值 */
+        /* 每1000次采样计算一次平均值并显示 */
         if(sample_count >= 1000)
         {
-        float avg_current = voltage_sum / sample_count;
-        float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
-        char buffer1[80];
-        sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
-        printf(buffer1); // 发送到串口
-        /* 重置计数器和累加器 */
-        voltage_sum = 0;
-        raw_voltage_sum = 0; // 重置原始电压累加值
-        sample_count = 0;
+            float avg_current = voltage_sum / sample_count;
+            float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
+            
+            // 发送到串口
+            char buffer1[80];
+            sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
+            printf(buffer1);
+            
+            // 定义LCD显示区域的位置
+            uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
+            uint16_t value_x = 90;  // 值显示的起始x坐标
+            uint16_t current_y = text_y + 20;  // 电流显示的y坐标，往下移动
+            uint16_t voltage_y = text_y - 10;  // 电压显示的y坐标，往下移动
+        
+
+            // 显示标签
+            LCD_Show_String(5, current_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+            LCD_Show_String(5, voltage_y, "Voltage:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+            
+            // 清除上一次显示的值
+            LCD_Fill_Rect(value_x, current_y - 2, LCD_WIDTH - 10, current_y + 18, COLOR_BLACK);
+            LCD_Fill_Rect(value_x, voltage_y - 2, LCD_WIDTH - 10, voltage_y + 18, COLOR_BLACK);
+            
+            // 格式化显示电流值 (uA)
+            char current_str[30];
+            sprintf(current_str, "%.3f uA", avg_current);
+            // 格式化显示电压值 (V)
+            char voltage_str[30];
+            sprintf(voltage_str, "%.6f V", avg_voltage);
+            
+            // 显示到LCD
+            LCD_Show_String(value_x, current_y, current_str, COLOR_GREEN, COLOR_BLACK, FONT_1608);
+            LCD_Show_String(value_x, voltage_y, voltage_str, COLOR_YELLOW, COLOR_BLACK, FONT_1608);
+            
+            /* 重置计数器和累加器 */
+            voltage_sum = 0;
+            raw_voltage_sum = 0; // 重置原始电压累加值
+            sample_count = 0;
         }
        
      }
