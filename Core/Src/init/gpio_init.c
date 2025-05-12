@@ -49,6 +49,21 @@ void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(GPIOG, GPIO_PIN_12, GPIO_PIN_SET);  // RST拉高
   HAL_GPIO_WritePin(GPIOI, GPIO_PIN_6, GPIO_PIN_RESET); // 背光打开（低电平激活）
   
-  printf("GPIO initialization completed with LCD pin settings\r\n");
+  /* 配置外部中断引脚 */
+  /*Configure GPIO pin : PH10 */
+  GPIO_InitStruct.Pin = GPIO_PIN_10;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : PH9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+  
+  /* EXTI中断将在ADS1220_Init()函数结束时启用 */
+  
+  printf("GPIO initialization completed with LCD pin settings and interrupts\r\n");
 /* USER CODE END MX_GPIO_Init_2 */
 }

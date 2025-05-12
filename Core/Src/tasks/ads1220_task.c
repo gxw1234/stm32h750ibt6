@@ -11,8 +11,47 @@
 /* SPI句柄定义 */
 SPI_HandleTypeDef hspi4;
 
+
+uint32_t sample_count = 0;
+float voltage_sum = 0;
+float raw_voltage_sum = 0; // 用于存储原始电压累加值
+
+uint32_t sample_count_2 = 0;
+float voltage_sum_2 = 0;
+
+
+uint32_t adc_value = 0;
+
+/* ADS1220参考电压 */
+#define VREF              2.048f    // 参考电压2.048V
+#define ADC_FSR           8388608.0f // 2^23, ADC满量程范围
+
+
+/* 将24位ADC数据转换为电压值 */
+static float Convert_ADC_To_Voltage(uint32_t adc_value)
+{
+    int32_t signed_value;
+    float voltage;
+    uint32_t temp = 0;
+    
+    // 如果是负数（最高位为1）
+    if(adc_value & 0x800000) {
+        signed_value = (int32_t)(adc_value| 0xFF000000);
+    } else {
+        signed_value = (int32_t)adc_value;
+    }
+    
+    // 将补码转换为电压值
+    voltage = ((float)signed_value * VREF) / ADC_FSR;
+
+    return voltage;
+
+}
+
 void ADS1220_Task(void *argument)
 {
+
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     ADS1220_Init();
 
     SPI_CS1_LOW();
@@ -63,6 +102,14 @@ void ADS1220_Task(void *argument)
     SPI_CS2_HIGH();
 
     vTaskDelay(pdMS_TO_TICKS(1));
+
+    /* EXTI interrupt init for PH9 */
+    HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
+    
+    /* EXTI interrupt init for PH10 */
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+    HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
 
 
@@ -129,9 +176,10 @@ void ADS1220_Init(void)
       /* CS2默认高电平 */
       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
     
-    
-    
-    
+      /* 所有初始化完成后，启用EXTI中断 */
+      printf("ADS1220 initialization completed, enabling EXTI interrupts\r\n");
+      
+
 }
 
 void SPI_Transmit(uint8_t data) {
@@ -158,4 +206,82 @@ uint8_t SPI_TransmitReceive(uint8_t data) {
         Error_Handler();
     }
     return rxData[0];
+}
+
+/**
+  * @brief GPIO EXTI callback function
+  * @param GPIO_Pin: Pin connected to EXTI line
+  * @retval None
+  */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if(GPIO_Pin == GPIO_PIN_10)
+    {
+   
+       SPI_CS2_LOW();
+       uint32_t adc_value = 0;
+       uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
+       uint8_t mid = SPI_TransmitReceive(0xFF);  // 读取中8位
+       uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
+       SPI_CS2_HIGH();
+       adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
+        float voltage = Convert_ADC_To_Voltage(adc_value);  
+        float current =  voltage * 4000+  0.296;
+
+        voltage_sum += current;
+        raw_voltage_sum += voltage; // 累加原始电压值
+        sample_count++;
+
+        /* 每1000次采样计算一次平均值 */
+        if(sample_count >= 1000)
+        {
+        float avg_current = voltage_sum / sample_count;
+        float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
+        char buffer1[80];
+        sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
+        printf(buffer1); // 发送到串口
+        /* 重置计数器和累加器 */
+        voltage_sum = 0;
+        raw_voltage_sum = 0; // 重置原始电压累加值
+        sample_count = 0;
+        }
+       
+     }
+     else if(GPIO_Pin == GPIO_PIN_9)
+     {
+
+
+    //    SPI_CS1_LOW();
+    //    uint32_t adc_value = 0;
+    //    uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
+    //    uint8_t mid = SPI_TransmitReceive(0xFF);  // 读取中8位
+    //    uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
+    //    SPI_CS1_HIGH();
+    //    adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
+   
+
+    //      float voltage = Convert_ADC_To_Voltage(adc_value);  
+    //      float current =  (voltage * 797 )*3+  0.202;
+   
+    //      voltage_sum_2 += current;
+   
+   
+    //      sample_count_2++;
+   
+    //      if(sample_count_2 >= 1000)
+    //      {
+    //        float avg_voltage = voltage_sum_2 / sample_count_2;
+    //        char buffer1[50];
+    //        sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_voltage); // 格式化为两位小数
+    //        printf(buffer1); // 发送到串口
+    //        /* 重置计数器和累加器 */
+    //        voltage_sum_2 = 0;
+    //        sample_count_2 = 0;
+    //      }
+   
+   
+   
+     }
+   
+     
 }
