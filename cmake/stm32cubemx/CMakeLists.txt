@@ -33,6 +33,7 @@ target_include_directories(stm32cubemx INTERFACE
 target_sources(stm32cubemx INTERFACE
     ../../Core/main.c
     ../../Core/Src/tasks/lcd_task.c
+    ../../Core/Src/tasks/ads1220_task.c
     ../../Core/Src/init/uart_init.c
     ../../Core/Src/init/gpio_init.c
     # ../../Core/Src/config/retarget.c  # 已注释掉
