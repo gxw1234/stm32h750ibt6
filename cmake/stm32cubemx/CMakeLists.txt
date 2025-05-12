@@ -15,6 +15,8 @@ target_compile_definitions(stm32cubemx INTERFACE
 
 target_include_directories(stm32cubemx INTERFACE
     ../../Core/Inc
+    ../../Core/Inc/config
+    ../../Core/Inc/pc_to_stm_command_handler
     ../../USB_DEVICE/App
     ../../USB_DEVICE/Target
     ../../Drivers/STM32H7xx_HAL_Driver/Inc
@@ -30,9 +32,12 @@ target_include_directories(stm32cubemx INTERFACE
 
 target_sources(stm32cubemx INTERFACE
     ../../Core/main.c
-    ../../Core/Src/freertos.c
-    ../../Core/Src/stm32h7xx_it.c
-    ../../Core/Src/stm32h7xx_hal_msp.c
+    ../../Core/Src/tasks/lcd_task.c
+    ../../Core/Src/init/uart_init.c
+    # ../../Core/Src/config/retarget.c  # 已注释掉
+    ../../Core/Src/config/freertos.c
+    ../../Core/Src/config/stm32h7xx_it.c
+    ../../Core/Src/config/stm32h7xx_hal_msp.c
     ../../USB_DEVICE/App/usb_device.c
     ../../USB_DEVICE/App/usbd_desc.c
     ../../USB_DEVICE/App/usbd_cdc_if.c
@@ -58,7 +63,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
-    ../../Core/Src/system_stm32h7xx.c
+    ../../Core/Src/config/system_stm32h7xx.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/list.c
@@ -73,9 +78,10 @@ target_sources(stm32cubemx INTERFACE
     ../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ctlreq.c
     ../../Middlewares/ST/STM32_USB_Device_Library/Core/Src/usbd_ioreq.c
     ../../Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Src/usbd_cdc.c
-    ../../Core/Src/sysmem.c
-    ../../Core/Src/syscalls.c
+    ../../Core/Src/config/sysmem.c
+    ../../Core/Src/config/syscalls.c
     ../../startup_stm32h750xx.s
+    ../../Core/Src/pc_to_stm_command_handler/command_handler.c
 )
 
 target_link_directories(stm32cubemx INTERFACE

@@ -21,6 +21,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_cdc_if.h"
 
+#include "command_handler.h"
+
 /* USER CODE BEGIN INCLUDE */
 //-----------------ADD GUOXUAN-----------------------
 // extern volatile int8_t usb_rxne;
@@ -269,6 +271,8 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
   /* USER CODE BEGIN 11 */
 	//-------------ADD GUOXUAN--------------------
+
+  Process_Command(Buf, Len);
 
 //--------------------------------------------
 

@@ -1,0 +1,246 @@
+#include "command_handler.h"
+#include "main.h"
+
+// 外部变量声明
+extern UART_HandleTypeDef huart1;
+
+/**
+ * @brief 添加参数到参数缓冲区
+ * 
+ * @param buffer 目标缓冲区
+ * @param pos 当前位置指针
+ * @param data 参数数据
+ * @param len 参数长度
+ * @return int 添加后的位置
+ */
+int Add_Parameter(uint8_t* buffer, int pos, void* data, uint16_t len) {
+    // 添加参数头
+    PARAM_HEADER header;
+    header.param_len = len;
+    
+    // 复制参数头
+    memcpy(buffer + pos, &header, sizeof(PARAM_HEADER));
+    pos += sizeof(PARAM_HEADER);
+    
+    // 复制参数数据
+    memcpy(buffer + pos, data, len);
+    pos += len;
+    
+    return pos;
+}
+
+/**
+ * @brief 从参数缓冲区获取参数
+ * 
+ * @param buffer 源缓冲区
+ * @param pos 当前位置指针
+ * @param data 参数数据目标缓冲区
+ * @param max_len 最大参数长度
+ * @return int 处理后的位置，-1表示错误
+ */
+int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
+    // 获取参数头
+    PARAM_HEADER header;
+    memcpy(&header, buffer + pos, sizeof(PARAM_HEADER));
+    pos += sizeof(PARAM_HEADER);
+    
+    // 检查缓冲区大小
+    if (header.param_len > max_len) {
+        // 如果参数长度超过缓冲区大小，返回错误
+        return -1;
+    }
+    
+    // 复制参数数据
+    memcpy(data, buffer + pos, header.param_len);
+    pos += header.param_len;
+    
+    return pos;
+}
+
+/**
+ * @brief 处理SPI初始化命令
+ * 
+ * @param spi_index SPI索引
+ * @param pConfig SPI配置结构体指针
+ */
+static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
+   
+    char buffer[128];
+
+    sprintf(buffer, "STM32_SPI Init: Index=%d, Mode=%d, Master=%d, CPOL=%d, CPHA=%d, LSB=%d, SelPol=%d, Clock=%lu\r\n", 
+            spi_index, pConfig->Mode, pConfig->Master, pConfig->CPOL, pConfig->CPHA, 
+            pConfig->LSBFirst, pConfig->SelPolarity, pConfig->ClockSpeedHz);
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+    
+    // TODO: 实际实现SPI初始化
+}
+
+/**
+ * @brief 处理SPI写数据命令
+ * 
+ * @param spi_index SPI索引
+ * @param data 数据缓冲区
+ * @param data_len 数据长度
+ */
+static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
+    // 打印收到的SPI写命令信息
+    char header_buffer[64];
+    sprintf(header_buffer, "\r\nSPI Write: Index=%d, DataLen=%d\r\nData: ", spi_index, data_len);
+    HAL_UART_Transmit(&huart1, (uint8_t*)header_buffer, strlen(header_buffer), 100);
+    
+    // 限制打印的数据长度，避免缓冲区溢出
+    uint16_t print_len = data_len > 100 ? 100 : data_len;
+    
+    // 打印数据内容（十六进制格式）
+    for(uint16_t i = 0; i < print_len; i++) {
+        char byte_buffer[8];
+        sprintf(byte_buffer, "%02X ", data[i]);
+        HAL_UART_Transmit(&huart1, (uint8_t*)byte_buffer, strlen(byte_buffer), 10);
+        
+        // 每16个字节换行
+        if((i + 1) % 16 == 0) {
+            HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
+        }
+    }
+    
+    // 如果还有更多数据没有打印，提示用户
+    if(data_len > print_len) {
+        char more_buffer[64];
+        sprintf(more_buffer, "\r\n... (more %d bytes not shown)\r\n", data_len - print_len);
+        HAL_UART_Transmit(&huart1, (uint8_t*)more_buffer, strlen(more_buffer), 100);
+    } else {
+        HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
+    }
+    
+    // TODO: 这里将来实现真正的SPI写数据操作
+}
+
+/**
+ * @brief 处理接收到的命令
+ * 
+ * @param Buf 接收到的数据缓冲区
+ * @param Len 数据长度
+ * @return int8_t 处理结果，0表示成功
+ */
+int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
+    // 判断数据长度是否足够
+    if (*Len >= sizeof(GENERIC_CMD_HEADER)) {
+        GENERIC_CMD_HEADER* header = (GENERIC_CMD_HEADER*)Buf;
+        
+        // 根据协议类型分发处理
+        switch (header->protocol_type) {
+            case PROTOCOL_SPI: {
+                // 处理SPI协议命令
+                switch (header->cmd_id) {
+                    case CMD_INIT: {
+                        // SPI初始化命令
+                        char buffer[256];
+                        sprintf(buffer, "SPI Init Command: Device=%d, ParamCount=%d\r\n", 
+                                header->device_index, header->param_count);
+                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                        
+                        // 判断是否有参数
+                        if (header->param_count > 0) {
+                            // 当前处理位置，跳过命令头
+                            int pos = sizeof(GENERIC_CMD_HEADER);
+                            
+                            // 我们需要一个SPI配置结构体
+                            SPI_CONFIG spi_config;
+                            
+                            // 获取第一个参数，应该是SPI配置
+                            pos = Get_Parameter(Buf, pos, &spi_config, sizeof(SPI_CONFIG));
+                            
+                            if (pos > 0) {
+                                // 处理SPI初始化
+                                Process_SPI_Init(header->device_index, &spi_config);
+                            } else {
+                                char* error_msg = "Error: Invalid parameter format for SPI_INIT\r\n";
+                                HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                            }
+                        } else {
+                            char* error_msg = "Error: No parameters for SPI_INIT command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    
+                    case CMD_WRITE: {
+                        // SPI写命令
+                        if (header->data_len > 0) {
+                            // 数据部分开始位置：命令头 + 参数区
+                            int data_pos = sizeof(GENERIC_CMD_HEADER);
+                            
+                            // 如果有参数，需要跳过参数区
+                            for (int i = 0; i < header->param_count; i++) {
+                                PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
+                                data_pos += sizeof(PARAM_HEADER) + param_header->param_len;
+                            }
+                            
+                            // 提取数据部分
+                            uint8_t* write_data = Buf + data_pos;
+                            
+                            // 处理SPI写数据命令
+                            Process_SPI_Write(header->device_index, write_data, header->data_len);
+                        } else {
+                            char* error_msg = "Error: No data for SPI_WRITE command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    
+                    case CMD_READ:
+                    case CMD_TRANSFER:
+                        // TODO: 实现其他SPI命令的处理
+                        {
+                            char* msg = "Received other SPI command (not implemented yet)\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                        }
+                        break;
+                        
+                    default: {
+                        char buffer[64];
+                        sprintf(buffer, "Unknown SPI command ID: 0x%02X\r\n", header->cmd_id);
+                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                        break;
+                    }
+                }
+                break;
+            }
+            
+            case PROTOCOL_IIC: {
+                // 处理IIC协议命令
+                char* msg = "Received IIC command (not implemented yet)\r\n";
+                HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                break;
+            }
+            
+            case PROTOCOL_UART: {
+                // 处理UART协议命令
+                char* msg = "Received UART command (not implemented yet)\r\n";
+                HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                break;
+            }
+            
+            case PROTOCOL_GPIO: {
+                // 处理GPIO协议命令
+                char* msg = "Received GPIO command (not implemented yet)\r\n";
+                HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                break;
+            }
+            
+            default: {
+                // 未知协议类型
+                char buffer[64];
+                sprintf(buffer, "Unknown protocol type: 0x%02X\r\n", header->protocol_type);
+                HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                break;
+            }
+        }
+    } else {
+        // 数据过短，直接打印原始数据
+        HAL_UART_Transmit(&huart1, Buf, *Len, 100);
+    }
+    
+    return 0;
+}

@@ -27,6 +27,8 @@
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "tasks/lcd_task.h"
+#include "init/uart_init.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -46,10 +48,11 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-UART_HandleTypeDef huart1;
+// UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 osThreadId printTaskHandle;  /* 添加新的线程句柄 */
+TaskHandle_t lcdTaskHandle;  /* LCD线程句柄 */
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -58,7 +61,6 @@ osThreadId printTaskHandle;  /* 添加新的线程句柄 */
 void SystemClock_Config(void);
 static void MPU_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
 void StartDefaultTask(void const * argument);
 void StartPrintTask(void * argument);  /* 新的打印线程函数声明 */
 
@@ -103,8 +105,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_USART1_UART_Init();
+  
   /* USER CODE BEGIN 2 */
+  /* 初始化UART和printf重定向 */
+  UART_Init();
+  
   MX_USB_DEVICE_Init();
   /* USER CODE END 2 */
 
@@ -132,6 +137,9 @@ int main(void)
   /* USER CODE BEGIN RTOS_THREADS */
   /* 使用原生FreeRTOS API创建打印线程 */
   xTaskCreate(StartPrintTask, "PrintTask", configMINIMAL_STACK_SIZE * 2, NULL, 1, (TaskHandle_t*)&printTaskHandle);
+  
+  /* 创建LCD显示线程 */
+  xTaskCreate(LCD_Task, "LCDTask", configMINIMAL_STACK_SIZE * 4, NULL, 2, &lcdTaskHandle);
   /* USER CODE END RTOS_THREADS */
 
 
@@ -212,53 +220,7 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART1_UART_Init(void)
-{
 
-  /* USER CODE BEGIN USART1_Init 0 */
-
-  /* USER CODE END USART1_Init 0 */
-
-  /* USER CODE BEGIN USART1_Init 1 */
-
-  /* USER CODE END USART1_Init 1 */
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart1.Init.ClockPrescaler = UART_PRESCALER_DIV1;
-  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetTxFifoThreshold(&huart1, UART_TXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_SetRxFifoThreshold(&huart1, UART_RXFIFO_THRESHOLD_1_8) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_UARTEx_DisableFifoMode(&huart1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART1_Init 2 */
-
-  /* USER CODE END USART1_Init 2 */
-
-}
 
 /**
   * @brief GPIO Initialization Function
@@ -294,11 +256,8 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
-  char msg[] = "A";  // 只发送一个字符
-  
-  // 发送一次字符
-  HAL_UART_Transmit(&huart1, (uint8_t*)msg, sizeof(msg)-1, 100);
-  
+  char msg[] = "Version 1.0.0\n\r";  
+  printf("%s", msg);
   /* Infinite loop */
   for(;;)
   {
@@ -325,8 +284,8 @@ void StartPrintTask(void * argument)
   for(;;)
   {    
     sprintf(countMsg, "Count: %lu\r\n", count++);
-    HAL_UART_Transmit(&huart1, (uint8_t*)msg, sizeof(msg)-1, 100);
-    HAL_UART_Transmit(&huart1, (uint8_t*)countMsg, strlen(countMsg), 100);
+    printf("%s", msg);
+    printf("%s", countMsg);
     vTaskDelay(pdMS_TO_TICKS(1000)); // 使用FreeRTOS原生延时函数，1秒
   }
   /* USER CODE END StartPrintTask */
