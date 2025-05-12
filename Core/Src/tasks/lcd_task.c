@@ -562,33 +562,55 @@ void LCD_Fill_Rect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t 
 /* 初始化ST7789 LCD */
 void LCD_Init(void)
 {
+    printf("LCD_Init: Starting LCD initialization...\r\n");
+    
+    // 打开背光 - 先打开背光可以提前看到屏幕
+    LCD_BLK_ON;
+    printf("LCD_Init: Backlight ON\r\n");
+    LCD_Delay(10);
+    
     // 复位LCD
+    printf("LCD_Init: Resetting LCD...\r\n");
     LCD_Reset();
     
+    // 软件复位命令
+    LCD_Write_Cmd(ST7789_SWRESET);
+    LCD_Delay(150);  // 增加复位后的延时
+    
     // 退出睡眠模式
+    printf("LCD_Init: Exiting sleep mode...\r\n");
     LCD_Write_Cmd(ST7789_SLPOUT);
-    LCD_Delay(120);
+    LCD_Delay(150);  // 增加退出睡眠的延时
     
     // 设置像素格式，16位RGB565
+    printf("LCD_Init: Setting pixel format...\r\n");
     LCD_Write_Cmd(ST7789_COLMOD);
-    LCD_Write_Data(0x05);
+    LCD_Write_Data(0x55);  // 尝试不同的像素格式，0x55对应16位/像素
+    LCD_Delay(10);
     
-    // 设置显示方向
+    // 设置显示方向 - 尝试多种方向
+    printf("LCD_Init: Setting display orientation...\r\n");
     LCD_Write_Cmd(ST7789_MADCTL);
-    LCD_Write_Data(0x08); // 0x08方向，如有需要可以调整
+    LCD_Write_Data(0x08);  // 修改为0x08，这是标准的上下正确的方向值
+    LCD_Delay(10);
     
     // 开启显示反转
-    LCD_Write_Cmd(ST7789_INVON);
+    printf("LCD_Init: Setting display inversion...\r\n");
+    LCD_Write_Cmd(ST7789_INVON);  // 显示反转ON
+    LCD_Delay(10);
     
     // 开启显示
+    printf("LCD_Init: Turning display ON...\r\n");
     LCD_Write_Cmd(ST7789_NORON);
+    LCD_Delay(10);
     LCD_Write_Cmd(ST7789_DISPON);
+    LCD_Delay(120);  // 等待显示稳定
     
-    // 打开背光
-    LCD_BLK_ON;
+    printf("LCD_Init: Initialization complete\r\n");
     
-    // 屏幕初始化，清为黑色
-    LCD_Clear(COLOR_BLACK);
+    // 屏幕初始化，清为红色(便于调试，更容易看出屏幕是否工作)
+    LCD_Clear(COLOR_RED);
+    printf("LCD_Init: Screen cleared to RED\r\n");
 }
 
 /* 显示ASCII字符 */

@@ -34,6 +34,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/main.c
     ../../Core/Src/tasks/lcd_task.c
     ../../Core/Src/init/uart_init.c
+    ../../Core/Src/init/gpio_init.c
     # ../../Core/Src/config/retarget.c  # 已注释掉
     ../../Core/Src/config/freertos.c
     ../../Core/Src/config/stm32h7xx_it.c

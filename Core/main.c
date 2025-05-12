@@ -136,7 +136,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* 使用原生FreeRTOS API创建打印线程 */
-  xTaskCreate(StartPrintTask, "PrintTask", configMINIMAL_STACK_SIZE * 2, NULL, 1, (TaskHandle_t*)&printTaskHandle);
+  // xTaskCreate(StartPrintTask, "PrintTask", configMINIMAL_STACK_SIZE * 2, NULL, 1, (TaskHandle_t*)&printTaskHandle);
   
   /* 创建LCD显示线程 */
   xTaskCreate(LCD_Task, "LCDTask", configMINIMAL_STACK_SIZE * 4, NULL, 2, &lcdTaskHandle);
@@ -229,6 +229,8 @@ void SystemClock_Config(void)
   */
 static void MX_GPIO_Init(void)
 {
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
+  
 /* USER CODE BEGIN MX_GPIO_Init_1 */
 /* USER CODE END MX_GPIO_Init_1 */
 
@@ -237,8 +239,28 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOG_CLK_ENABLE();  // LCD使用的GPIOG
+  __HAL_RCC_GPIOI_CLK_ENABLE();  // LCD使用的GPIOI
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
+  // LCD引脚初始化（ST7789）- 与原始工作项目保持一致
+  // 基于软件SPI，所有引脚配置为输出模式
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;  // 改为无上拉下拉，与原始项目一致
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+  
+  // GPIOG引脚初始化 - LCD信号引脚
+  GPIO_InitStruct.Pin = GPIO_PIN_8 | GPIO_PIN_12 | GPIO_PIN_13 | GPIO_PIN_14 | GPIO_PIN_15;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+  
+  // GPIOI引脚初始化 - LCD背光控制
+  GPIO_InitStruct.Pin = GPIO_PIN_6;
+  HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
+  
+  /* 设置引脚初始状态 - 与原始工作项目一致 */
+  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_8, GPIO_PIN_SET);   // CS拉高，不选中
+  HAL_GPIO_WritePin(GPIOG, GPIO_PIN_12, GPIO_PIN_SET);  // RST拉高
+  HAL_GPIO_WritePin(GPIOI, GPIO_PIN_6, GPIO_PIN_RESET); // 背光打开（低电平激活）
 /* USER CODE END MX_GPIO_Init_2 */
 }
 
