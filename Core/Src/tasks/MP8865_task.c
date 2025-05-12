@@ -20,6 +20,18 @@ I2C_HandleTypeDef hi2c4;
  */
 HAL_StatusTypeDef MP8865_SetVoltage(uint8_t voltage_value)
 {
+    // u6253u5370u8f93u5165u503cu7684u4e8cu8fdbu5236u8868u793a
+    printf("MP8865_SetVoltage: Value: 0x%02X (Bin: %d%d%d%d%d%d%d%d)\r\n", 
+           voltage_value,
+           (voltage_value & 0x80) ? 1 : 0,
+           (voltage_value & 0x40) ? 1 : 0,
+           (voltage_value & 0x20) ? 1 : 0,
+           (voltage_value & 0x10) ? 1 : 0,
+           (voltage_value & 0x08) ? 1 : 0,
+           (voltage_value & 0x04) ? 1 : 0,
+           (voltage_value & 0x02) ? 1 : 0,
+           (voltage_value & 0x01) ? 1 : 0);
+    
     HAL_StatusTypeDef status;
     uint8_t data[2];
     
@@ -75,12 +87,9 @@ void MP8865_Init(void)
 }
 void MP8865_Task(void *pvParameters)
 {
-
     MP8865_Init();
     printf("MP8865 start run...\r\n");
-    
     vTaskDelay(pdMS_TO_TICKS(1000)); // 上电延时
-    
     // 使用新的API设置电压
     HAL_StatusTypeDef status = MP8865_SetVoltage(0b10110000);
     if (status != HAL_OK)
@@ -91,14 +100,8 @@ void MP8865_Task(void *pvParameters)
     {
         printf("MP8865 Init Success!\r\n");
     }
-
-
     while (1)
     {
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
-
-
-        
+        vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
 }

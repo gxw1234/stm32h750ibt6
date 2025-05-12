@@ -240,9 +240,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
             
             // 发送到串口
-            char buffer1[80];
-            sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
-            printf(buffer1);
+            // char buffer1[80];
+            // sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
+            // printf(buffer1);
             
             // 定义LCD显示区域的位置
             uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
