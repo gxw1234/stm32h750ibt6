@@ -1,6 +1,7 @@
 #include "command_handler.h"
 #include "main.h"
 #include "../tasks/MP8865_task.h"
+#include "tasks/ads1220_task.h"  // 添加头文件以使用数据发送控制函数
 
 // 外部变量声明
 extern UART_HandleTypeDef huart1;
@@ -96,6 +97,69 @@ static void Process_Power_SetVoltage(uint8_t channel, uint16_t voltage_mv) {
         sprintf(buffer, "[MP8865] CH:%d, Set voltage failed, error code: %d\r\n", channel, status);
     }
     HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+}
+
+
+/**
+ * @brief 处理开始读取电流命令
+ * 
+ * @param device_index 设备索引
+ */
+static void Process_Power_StartCurrentReading(uint8_t device_index) {
+    printf("Receive Command:POWER_CMD_START_CURRENT_READING,device_index:%d\r\n", device_index);
+    
+    // 启用电流数据发送
+    Enable_Current_Data_Sending();
+}
+
+/**
+ * @brief 处理停止读取电流命令
+ * 
+ * @param device_index 设备索引
+ */
+static void Process_Power_StopCurrentReading(uint8_t device_index) {
+    printf("Receive Command:POWER_CMD_STOP_CURRENT_READING,device_index:%d\r\n", device_index);
+    
+    // 停止电流数据发送
+    Disable_Current_Data_Sending();
+}
+
+/**
+ * @brief 处理读取电流数据命令
+ * 
+ * @param channel 电流通道 (POWER_CHANNEL_UA 或 POWER_CHANNEL_MA)
+ * @param response_buf 响应缓冲区
+ * @param max_len 最大响应长度
+ * @return int 响应数据长度
+ */
+static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf, int max_len) {
+    char buffer[80];
+    sprintf(buffer, "[Current] Received command: Read current data, channel: %d\r\n", channel);
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+    
+    // 使用测试值
+    float current_value = 123.456f;
+    int response_len = 0;
+    
+    // 构造响应数据的基本框架
+    if (max_len >= sizeof(GENERIC_CMD_HEADER) + sizeof(float)) {
+        GENERIC_CMD_HEADER* response_header = (GENERIC_CMD_HEADER*)response_buf;
+        response_header->protocol_type = PROTOCOL_POWER;
+        response_header->cmd_id = POWER_CMD_READ_CURRENT_DATA;
+        response_header->device_index = channel;
+        response_header->param_count = 0;
+        response_header->data_len = sizeof(float);
+        
+        // 使用测试值应答
+        memcpy(response_buf + sizeof(GENERIC_CMD_HEADER), &current_value, sizeof(float));
+        response_len = sizeof(GENERIC_CMD_HEADER) + sizeof(float);
+        
+        // 打印返回值
+        sprintf(buffer, "[Current] Returning test value: %.3f\r\n", current_value);
+        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+    }
+    
+    return response_len;
 }
 
 /**
@@ -245,6 +309,31 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         } else {
                             char* error_msg = "Error: No voltage value for POWER_SET_VOLTAGE command\r\n";
                             HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    
+                    case POWER_CMD_START_CURRENT_READING: {
+                        // 开始读取电流命令
+                        Process_Power_StartCurrentReading(header->device_index);
+                        break;
+                    }
+                    
+                    case POWER_CMD_STOP_CURRENT_READING: {
+                        // 停止读取电流命令
+                        Process_Power_StopCurrentReading(header->device_index);
+                        break;
+                    }
+                    
+                    case POWER_CMD_READ_CURRENT_DATA: {
+                        // 读取电流数据命令
+                        uint8_t response_buffer[128];  // 响应缓冲区
+                        int response_len = Process_Power_ReadCurrentData(header->device_index, response_buffer, sizeof(response_buffer));
+                        
+                        if (response_len > 0) {
+                            char debug_msg[64];
+                            sprintf(debug_msg, "[Debug] Response data ready, length: %d bytes\r\n", response_len);
+                            HAL_UART_Transmit(&huart1, (uint8_t*)debug_msg, strlen(debug_msg), 100);
                         }
                         break;
                     }

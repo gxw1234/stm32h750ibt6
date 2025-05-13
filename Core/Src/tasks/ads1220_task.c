@@ -1,6 +1,8 @@
 #include "tasks/ads1220_task.h"
 #include "tasks/lcd_task.h"  /* 包含 LCD 函数声明 */
 #include <stdio.h>
+#include "usb_device.h"
+#include "usbd_cdc_if.h"
 
 #define SPI_CS1_LOW()       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET)
 #define SPI_CS1_HIGH()      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET)
@@ -20,6 +22,26 @@ static float raw_voltage_sum = 0; // 用于存储原始电压累加值
 static uint32_t sample_count_2 = 0;
 static float voltage_sum_2 = 0;
 
+// 电压数据发送相关变量
+#define DATA_BUFFER_SIZE 20000  // 足够存储1000个浮点数和换行符
+static uint8_t data_buffer[DATA_BUFFER_SIZE];  // 大的数据缓冲区
+static uint8_t sending_enabled = 0;  // 是否启用数据发送
+static uint32_t buffer_pos = 0;  // 数据缓冲区当前位置
+
+/**
+ * @brief 启用电压数据发送
+ */
+void Enable_Current_Data_Sending(void) {
+    buffer_pos = 0;  // 重置缓冲区位置
+    sending_enabled = 1;  // 启用发送开关
+}
+
+/**
+ * @brief 禁用电压数据发送
+ */
+void Disable_Current_Data_Sending(void) {
+    sending_enabled = 0;  // 关闭发送开关
+}
 
 // uint32_t adc_value = 0;
 
@@ -234,34 +256,27 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         voltage_sum += current;
         raw_voltage_sum += voltage; // 累加原始电压值
         sample_count++;
-
-        /* 每1000次采样计算一次平均值并显示 */
+        if(sending_enabled && (buffer_pos + 20) < DATA_BUFFER_SIZE) {
+            buffer_pos += sprintf((char*)data_buffer + buffer_pos, "%.6f\r\n", current);
+        }
         if(sample_count >= 1000)
         {
             float avg_current = voltage_sum / sample_count;
             float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
-            
-            // 发送到串口
             char buffer1[80];
             sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
             printf(buffer1);
-            
-            // 定义LCD显示区域的位置
             uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
             uint16_t value_x = 90;  // 值显示的起始x坐标
             uint16_t current_y = text_y + 20;  // 电流显示的y坐标，往下移动
             uint16_t voltage_y = text_y - 10;  // 电压显示的y坐标，往下移动
-        
-
-            // 显示标签
+    
             LCD_Show_String(5, current_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
             LCD_Show_String(5, voltage_y, "Voltage:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
             
-            // 清除上一次显示的值
             LCD_Fill_Rect(value_x, current_y - 2, LCD_WIDTH - 10, current_y + 18, COLOR_BLACK);
             LCD_Fill_Rect(value_x, voltage_y - 2, LCD_WIDTH - 10, voltage_y + 18, COLOR_BLACK);
             
-            // 格式化显示电流值 (uA)
             char current_str[30];
             sprintf(current_str, "%.3f uA", avg_current);
             // 格式化显示电压值 (V)
@@ -271,6 +286,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             // 显示到LCD
             LCD_Show_String(value_x, current_y, current_str, COLOR_GREEN, COLOR_BLACK, FONT_1608);
             LCD_Show_String(value_x, voltage_y, voltage_str, COLOR_YELLOW, COLOR_BLACK, FONT_1608);
+            
+            // 如果启用了发送，则将所有积累的数据一次性发送
+            if (sending_enabled && buffer_pos > 0) {
+                printf("send data\n");
+                // 发送缓冲区中的所有数据
+                CDC_Transmit_HS(data_buffer, buffer_pos);
+                
+                // 重置缓冲区位置
+                buffer_pos = 0;
+            }
             
             /* 重置计数器和累加器 */
             voltage_sum = 0;
@@ -297,8 +322,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         {
         float avg_current_mA = voltage_sum_2 / sample_count_2;
         char buffer1[50];
-        sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
-        printf(buffer1); // 发送到串口
+        // sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
+        // printf(buffer1); // 发送到串口
         
         // 定义LCD显示区域的位置（位置与GPIO_PIN_10不同，避免重叠）
         uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心

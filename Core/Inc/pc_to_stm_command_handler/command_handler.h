@@ -20,10 +20,15 @@
 #define CMD_TRANSFER        0x04    // 读写数据命令
 
 // 电源命令ID定义
-#define POWER_CMD_SET_VOLTAGE   0x01  // 设置电压命令
+#define POWER_CMD_SET_VOLTAGE       0x01  // 设置电压命令
+#define POWER_CMD_START_CURRENT_READING 0x02  // 开始读取电流命令
+#define POWER_CMD_STOP_CURRENT_READING  0x03  // 停止读取电流命令
+#define POWER_CMD_READ_CURRENT_DATA     0x04  // 读取电流数据命令
 
 // 电源通道定义
 #define POWER_CHANNEL_1         0x01  // 电源通道1
+#define POWER_CHANNEL_UA        0x02  // 微安电流通道
+#define POWER_CHANNEL_MA        0x03  // 毫安电流通道
 
 // 通用命令包头结构
 typedef struct _GENERIC_CMD_HEADER {

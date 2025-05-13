@@ -15,6 +15,10 @@ uint8_t SPI_TransmitReceive(uint8_t data);
 void SPI_Transmit(uint8_t data);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
 
+// 数据发送控制函数
+void Enable_Current_Data_Sending(void);  // 启用电流数据发送
+void Disable_Current_Data_Sending(void); // 禁用电流数据发送
+
 
 static float Convert_ADC_To_Voltage(uint32_t adc_value);
 #endif /* ADS1220_TASK_H */
