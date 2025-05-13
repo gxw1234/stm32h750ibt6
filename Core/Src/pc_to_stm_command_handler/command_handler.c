@@ -1,5 +1,6 @@
 #include "command_handler.h"
 #include "main.h"
+#include "../tasks/MP8865_task.h"
 
 // 外部变量声明
 extern UART_HandleTypeDef huart1;
@@ -77,6 +78,27 @@ static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
 }
 
 /**
+ * @brief 处理电压设置命令
+ * 
+ * @param channel 电源通道
+ * @param voltage_mv 电压值(mV)
+ */
+static void Process_Power_SetVoltage(uint8_t channel, uint16_t voltage_mv) {
+
+    char buffer[64];
+    uint8_t voltage_reg_value = (uint8_t)voltage_mv;
+    if (voltage_reg_value < 12) voltage_reg_value = 12;
+    if (voltage_reg_value > 255) voltage_reg_value = 255;
+    HAL_StatusTypeDef status = MP8865_SetVoltage(voltage_reg_value);
+    if (status == HAL_OK) {
+        sprintf(buffer, "[MP8865] CH:%d, Set voltage success, reg value: 0x%02X\r\n", channel, voltage_reg_value);
+    } else {
+        sprintf(buffer, "[MP8865] CH:%d, Set voltage failed, error code: %d\r\n", channel, status);
+    }
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+}
+
+/**
  * @brief 处理SPI写数据命令
  * 
  * @param spi_index SPI索引
@@ -124,35 +146,25 @@ static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_le
  * @return int8_t 处理结果，0表示成功
  */
 int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
-    // 判断数据长度是否足够
+   
     if (*Len >= sizeof(GENERIC_CMD_HEADER)) {
         GENERIC_CMD_HEADER* header = (GENERIC_CMD_HEADER*)Buf;
-        
-        // 根据协议类型分发处理
+
         switch (header->protocol_type) {
             case PROTOCOL_SPI: {
-                // 处理SPI协议命令
+
                 switch (header->cmd_id) {
                     case CMD_INIT: {
-                        // SPI初始化命令
+                       
                         char buffer[256];
                         sprintf(buffer, "SPI Init Command: Device=%d, ParamCount=%d\r\n", 
                                 header->device_index, header->param_count);
                         HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
-                        
-                        // 判断是否有参数
                         if (header->param_count > 0) {
-                            // 当前处理位置，跳过命令头
                             int pos = sizeof(GENERIC_CMD_HEADER);
-                            
-                            // 我们需要一个SPI配置结构体
                             SPI_CONFIG spi_config;
-                            
-                            // 获取第一个参数，应该是SPI配置
                             pos = Get_Parameter(Buf, pos, &spi_config, sizeof(SPI_CONFIG));
-                            
                             if (pos > 0) {
-                                // 处理SPI初始化
                                 Process_SPI_Init(header->device_index, &spi_config);
                             } else {
                                 char* error_msg = "Error: Invalid parameter format for SPI_INIT\r\n";
@@ -164,7 +176,6 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         }
                         break;
                     }
-                    
                     case CMD_WRITE: {
                         // SPI写命令
                         if (header->data_len > 0) {
@@ -188,16 +199,13 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         }
                         break;
                     }
-                    
                     case CMD_READ:
                     case CMD_TRANSFER:
-                        // TODO: 实现其他SPI命令的处理
                         {
                             char* msg = "Received other SPI command (not implemented yet)\r\n";
                             HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
                         }
                         break;
-                        
                     default: {
                         char buffer[64];
                         sprintf(buffer, "Unknown SPI command ID: 0x%02X\r\n", header->cmd_id);
@@ -207,9 +215,7 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 }
                 break;
             }
-            
             case PROTOCOL_IIC: {
-                // 处理IIC协议命令
                 char* msg = "Received IIC command (not implemented yet)\r\n";
                 HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
                 break;
@@ -226,6 +232,30 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 // 处理GPIO协议命令
                 char* msg = "Received GPIO command (not implemented yet)\r\n";
                 HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                break;
+            }
+            
+            case PROTOCOL_POWER: {
+                switch (header->cmd_id) {
+                    case POWER_CMD_SET_VOLTAGE: {
+                        uint16_t voltage_mv = 0;
+                        if (header->data_len >= sizeof(uint16_t)) {
+                            memcpy(&voltage_mv, Buf + sizeof(GENERIC_CMD_HEADER), sizeof(uint16_t));
+                            Process_Power_SetVoltage(header->device_index, voltage_mv);
+                        } else {
+                            char* error_msg = "Error: No voltage value for POWER_SET_VOLTAGE command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    
+                    default: {
+                        char buffer[64];
+                        sprintf(buffer, "Unknown POWER command ID: 0x%02X\r\n", header->cmd_id);
+                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                        break;
+                    }
+                }
                 break;
             }
             

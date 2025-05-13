@@ -11,12 +11,19 @@
 #define PROTOCOL_IIC        0x02    // IIC协议
 #define PROTOCOL_UART       0x03    // UART协议
 #define PROTOCOL_GPIO       0x04    // GPIO协议
+#define PROTOCOL_POWER      0x05    // 电源协议
 
 // 通用命令ID定义
 #define CMD_INIT            0x01    // 初始化命令
 #define CMD_WRITE           0x02    // 写数据命令
 #define CMD_READ            0x03    // 读数据命令
 #define CMD_TRANSFER        0x04    // 读写数据命令
+
+// 电源命令ID定义
+#define POWER_CMD_SET_VOLTAGE   0x01  // 设置电压命令
+
+// 电源通道定义
+#define POWER_CHANNEL_1         0x01  // 电源通道1
 
 // 通用命令包头结构
 typedef struct _GENERIC_CMD_HEADER {
@@ -48,8 +55,14 @@ typedef struct _SPI_CONFIG {
   uint8_t   CPHA;            // 时钟相位控制:0-第一个SCK时钟采样，1-第二个SCK时钟采样  
   uint8_t   LSBFirst;        // 数据移位方式:0-MSB在前，1-LSB在前  
   uint8_t   SelPolarity;     // 片选信号极性:0-低电平选中，1-高电平选中  
-  uint32_t  ClockSpeedHz;    // SPI时钟频率:单位为HZ，硬件模式下最大50000000，最小390625，频率按2的倍数改变  
+  uint32_t  ClockSpeedHz;    // SPI时钟频率:单位为HZ，硬件模式下最处50000000，最小390625，频率按2的倍数改变  
 } SPI_CONFIG, *PSPI_CONFIG;
+
+// 电压配置结构体
+typedef struct _VOLTAGE_CONFIG {
+  uint8_t   channel;     // 电源通道
+  uint16_t  voltage;     // 电压值（单位：mV）
+} VOLTAGE_CONFIG, *PVOLTAGE_CONFIG;
 
 /**
  * @brief 添加参数到参数缓冲区
