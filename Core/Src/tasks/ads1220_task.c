@@ -13,15 +13,15 @@
 SPI_HandleTypeDef hspi4;
 
 
-uint32_t sample_count = 0;
-float voltage_sum = 0;
-float raw_voltage_sum = 0; // 用于存储原始电压累加值
+static uint32_t sample_count = 0;
+static float voltage_sum = 0;
+static float raw_voltage_sum = 0; // 用于存储原始电压累加值
 
-uint32_t sample_count_2 = 0;
-float voltage_sum_2 = 0;
+static uint32_t sample_count_2 = 0;
+static float voltage_sum_2 = 0;
 
 
-uint32_t adc_value = 0;
+// uint32_t adc_value = 0;
 
 /* ADS1220参考电压 */
 #define VREF              2.048f    // 参考电压2.048V
@@ -54,6 +54,8 @@ void ADS1220_Task(void *argument)
 
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     ADS1220_Init();
+
+    vTaskDelay(pdMS_TO_TICKS(1));
 
     SPI_CS1_LOW();
     /* 发送复位命令 */
@@ -240,9 +242,9 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
             
             // 发送到串口
-            // char buffer1[80];
-            // sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
-            // printf(buffer1);
+            char buffer1[80];
+            sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
+            printf(buffer1);
             
             // 定义LCD显示区域的位置
             uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
@@ -279,38 +281,47 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
      }
      else if(GPIO_Pin == GPIO_PIN_9)
      {
+       SPI_CS1_LOW();
+       uint32_t adc_value = 0;
+       uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
+       uint8_t mid = SPI_TransmitReceive(0xFF);  // 读取中8位
+       uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
+       SPI_CS1_HIGH();
+       adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
+        float voltage = Convert_ADC_To_Voltage(adc_value);  
+        float current =  (voltage * 797 )*3+  0.202;
+        voltage_sum_2 += current;
+        sample_count_2++;
 
-
-    //    SPI_CS1_LOW();
-    //    uint32_t adc_value = 0;
-    //    uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
-    //    uint8_t mid = SPI_TransmitReceive(0xFF);  // 读取中8位
-    //    uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
-    //    SPI_CS1_HIGH();
-    //    adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
-   
-
-    //      float voltage = Convert_ADC_To_Voltage(adc_value);  
-    //      float current =  (voltage * 797 )*3+  0.202;
-   
-    //      voltage_sum_2 += current;
-   
-   
-    //      sample_count_2++;
-   
-    //      if(sample_count_2 >= 1000)
-    //      {
-    //        float avg_voltage = voltage_sum_2 / sample_count_2;
-    //        char buffer1[50];
-    //        sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_voltage); // 格式化为两位小数
-    //        printf(buffer1); // 发送到串口
-    //        /* 重置计数器和累加器 */
-    //        voltage_sum_2 = 0;
-    //        sample_count_2 = 0;
-    //      }
-   
-   
-   
+        if(sample_count_2 >= 1000)
+        {
+        float avg_current_mA = voltage_sum_2 / sample_count_2;
+        char buffer1[50];
+        sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
+        printf(buffer1); // 发送到串口
+        
+        // 定义LCD显示区域的位置（位置与GPIO_PIN_10不同，避免重叠）
+        uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
+        uint16_t value_x = 90;  // 值显示的起始x坐标
+        uint16_t current_mA_y = text_y + 50;  // 毫安电流显示的y坐标，比微安更下方
+        
+        // 显示标签
+        LCD_Show_String(5, current_mA_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+        
+        // 清除上一次显示的值
+        LCD_Fill_Rect(value_x, current_mA_y - 2, LCD_WIDTH - 10, current_mA_y + 18, COLOR_BLACK);
+        
+        // 格式化显示毫安电流值
+        char current_str[30];
+        sprintf(current_str, "%.3f mA", avg_current_mA);
+        
+        // 显示到LCD
+        LCD_Show_String(value_x, current_mA_y, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
+        
+        /* 重置计数器和累加器 */
+        voltage_sum_2 = 0;
+        sample_count_2 = 0;
+        }
      }
    
      

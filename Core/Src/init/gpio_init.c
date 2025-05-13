@@ -29,6 +29,8 @@ void MX_GPIO_Init(void)
   __HAL_RCC_GPIOG_CLK_ENABLE();  // LCD使用的GPIOG
   __HAL_RCC_GPIOI_CLK_ENABLE();  // LCD使用的GPIOI
 
+  __HAL_RCC_GPIOE_CLK_ENABLE();
+
 /* USER CODE BEGIN MX_GPIO_Init_2 */
   // LCD引脚初始化（ST7789）- 与原始工作项目保持一致
   // 基于软件SPI，所有引脚配置为输出模式
@@ -63,6 +65,12 @@ void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
   
   /* EXTI中断将在ADS1220_Init()函数结束时启用 */
+
+
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
   
   printf("GPIO initialization completed with LCD pin settings and interrupts\r\n");
 /* USER CODE END MX_GPIO_Init_2 */

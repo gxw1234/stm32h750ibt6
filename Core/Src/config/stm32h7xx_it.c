@@ -236,7 +236,10 @@ void EXTI9_5_IRQHandler(void)
   /* 这里添加您的PH9中断处理代码 */
   
   /* USER CODE END EXTI9_5_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9);
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_9) != RESET)
+  {
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_9); // 处理PH9引脚中断
+  }
   /* USER CODE BEGIN EXTI9_5_IRQn 1 */
 
   /* USER CODE END EXTI9_5_IRQn 1 */
@@ -252,7 +255,10 @@ void EXTI15_10_IRQHandler(void)
   /* 这里添加您的PH10中断处理代码 */
   
   /* USER CODE END EXTI15_10_IRQn 0 */
-  HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_10);
+  if(__HAL_GPIO_EXTI_GET_IT(GPIO_PIN_10) != RESET)
+  {
+    HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_10); // 处理PH10引脚中断
+  }
   /* USER CODE BEGIN EXTI15_10_IRQn 1 */
 
   /* USER CODE END EXTI15_10_IRQn 1 */
