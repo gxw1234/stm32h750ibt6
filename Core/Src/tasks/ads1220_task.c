@@ -293,9 +293,20 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
             char voltage_str[30] = {0};
             sprintf(voltage_str, "%.6f V", avg_voltage);
             
-            // 使用无背景显示函数，只绘制字符前景部分
-            LCD_Show_String_NoBG(value_x, current_y, current_str, COLOR_GREEN, FONT_1608);
-            LCD_Show_String_NoBG(value_x, voltage_y, voltage_str, COLOR_YELLOW, FONT_1608);
+            // 测量显示函数的执行时间
+            uint32_t start_time = HAL_GetTick();
+            
+            // 使用LCD显示函数
+            LCD_Show_String(value_x, current_y, current_str, COLOR_GREEN, COLOR_BLACK, FONT_1608);
+            LCD_Show_String(value_x, voltage_y, voltage_str, COLOR_YELLOW, COLOR_BLACK, FONT_1608);
+            
+            uint32_t end_time = HAL_GetTick();
+            uint32_t elapsed_time = end_time - start_time;
+            
+            // 输出执行时间
+            char time_str[30];
+            sprintf(time_str, "LCD time: %lu ms", elapsed_time);
+            printf("%s\r\n", time_str);
             
             // 如果启用了发送，则将所有积累的数据一次性发送
             if (sending_enabled && buffer_pos > 0) {
@@ -360,7 +371,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         sprintf(current_str, "%.3f mA", avg_current_mA);
         
         // 使用无背景显示函数，只绘制字符前景部分
-        LCD_Show_String_NoBG(value_x, current_mA_y, current_str, COLOR_CYAN, FONT_1608);
+        LCD_Show_String(value_x, current_mA_y, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
         
         /* 重置计数器和累加器 */
         voltage_sum_2 = 0;
