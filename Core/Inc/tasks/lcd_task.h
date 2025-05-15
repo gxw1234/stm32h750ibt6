@@ -28,6 +28,9 @@
 #define FONT_2010     20 /* 20x10 像素字体 */
 #define FONT_2412     24 /* 24x12 像素字体 */
 
+/* SPI句柄声明 */
+extern SPI_HandleTypeDef hspi6;  // 用于LCD的SPI句柄
+
 /* LCD控制函数声明 */
 void LCD_Init(void);
 void LCD_Clear(uint16_t color);
@@ -35,11 +38,13 @@ void LCD_Draw_Point(uint16_t x, uint16_t y, uint16_t color);
 void LCD_Draw_Line(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 void LCD_Fill_Rect(uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t color);
 void LCD_Set_Window(uint16_t x_start, uint16_t y_start, uint16_t x_end, uint16_t y_end);
+void LCD_SPI_Init(void);  // SPI初始化函数
 
 /* 字符显示函数声明 */
 void LCD_Show_Char(uint16_t x, uint16_t y, uint8_t ch, uint16_t color, uint16_t bg_color, uint8_t size);
 void LCD_Show_String(uint16_t x, uint16_t y, const char *str, uint16_t color, uint16_t bg_color, uint8_t size);
-
+void LCD_Show_Char_NoBG(uint16_t x, uint16_t y, uint8_t ch, uint16_t color, uint8_t size);
+void LCD_Show_String_NoBG(uint16_t x, uint16_t y, const char *str, uint16_t color, uint8_t size);
 
 /* FreeRTOS任务函数声明 */
 void LCD_Task(void *pvParameters);

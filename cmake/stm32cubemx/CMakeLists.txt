@@ -17,6 +17,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Core/Inc
     ../../Core/Inc/config
     ../../Core/Inc/pc_to_stm_command_handler
+    ../../Core/Inc/Font_library
     ../../USB_DEVICE/App
     ../../USB_DEVICE/Target
     ../../Drivers/STM32H7xx_HAL_Driver/Inc
@@ -37,7 +38,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/tasks/MP8865_task.c
     ../../Core/Src/init/uart_init.c
     ../../Core/Src/init/gpio_init.c
-    # ../../Core/Src/config/retarget.c  # 已注释掉
+    ../../Core/Src/Font_library/fonts.c
     ../../Core/Src/config/freertos.c
     ../../Core/Src/config/stm32h7xx_it.c
     ../../Core/Src/config/stm32h7xx_hal_msp.c
