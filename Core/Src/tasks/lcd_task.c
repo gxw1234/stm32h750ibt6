@@ -784,6 +784,210 @@ void LCD_Show_String(uint16_t x, uint16_t y, const char *str, uint16_t color, ui
     }
 }
 
+/* 显示ASCII字符串(无闪烁版) */
+void LCD_Show_String_NoFlicker(uint16_t x, uint16_t y, const char *old_str, const char *new_str, uint16_t color, uint16_t bg_color, uint8_t size)
+{
+    // 根据字体大小确定宽度
+    uint16_t char_width;
+    uint16_t char_height = size;
+    
+    // 确定字符宽度
+    if(size == FONT_0806) {
+        char_width = 6;
+    } else if(size == FONT_1206) {
+        char_width = 6;
+    } else if(size == FONT_1608) {
+        char_width = 8;
+    } else if(size == FONT_2010) {
+        char_width = 10;
+    } else if(size == FONT_2412) {
+        char_width = 12;
+    } else {
+        // 默认使用12x6字体
+        char_width = 6;
+        char_height = 12;
+    }
+    
+    uint16_t pos_x = x; // 起始位置
+    
+    // 处理较长的字符串
+    size_t old_len = old_str ? strlen(old_str) : 0;
+    size_t new_len = new_str ? strlen(new_str) : 0;
+    
+    // 先显示共同部分，逐字符对比更新
+    size_t min_len = (old_len < new_len) ? old_len : new_len;
+    
+    for (size_t i = 0; i < min_len; i++) {
+        if (old_str[i] != new_str[i]) {
+            // 字符变化，更新这一字符
+            LCD_Show_Char(pos_x, y, new_str[i], color, bg_color, size);
+        }
+        pos_x += char_width; // 移动到下一字符位置
+    }
+    
+    // 如果新字符串更长，显示额外的部分
+    if (new_len > old_len) {
+        for (size_t i = min_len; i < new_len; i++) {
+            LCD_Show_Char(pos_x, y, new_str[i], color, bg_color, size);
+            pos_x += char_width;
+        }
+    }
+    // 如果旧字符串更长，用背景色擦除多余的部分
+    else if (old_len > new_len) {
+        // 使用背景色填充剩余区域
+        LCD_Fill_Rect(pos_x, y, pos_x + (old_len - new_len) * char_width - 1, y + char_height - 1, bg_color);
+    }
+}
+
+/* 显示数值（无闪烁优化版） */
+void LCD_Show_Value(uint16_t x, uint16_t y, const char *old_value, const char *new_value, 
+                    uint16_t color, uint16_t bg_color, uint8_t size)
+{
+    LCD_Show_String_NoFlicker(x, y, old_value, new_value, color, bg_color, size);
+}
+
+/* 显示ASCII字符(无背景版) - 只绘制字符前景，不绘制背景 */
+void LCD_Show_Char_NoBG(uint16_t x, uint16_t y, uint8_t ch, uint16_t color, uint8_t size)
+{
+    // 根据字体大小确定宽度
+    uint16_t char_width;
+    uint16_t char_height = size;
+    
+    if(size == FONT_0806) {
+        char_width = 6;
+    } else if(size == FONT_1206) {
+        char_width = 6;
+    } else if(size == FONT_1608) {
+        char_width = 8;
+    } else if(size == FONT_2010) {
+        char_width = 10;
+    } else if(size == FONT_2412) {
+        char_width = 12;
+    } else {
+        // 默认使用12x6字体
+        char_width = 6;
+        char_height = 12;
+    }
+    
+    // 检查坐标是否超出屏幕范围
+    if(x > LCD_WIDTH-char_width || y > LCD_HEIGHT-char_height)
+        return;
+    
+    ch = ch - ' '; // 得到相对于空格的字符偏移量
+    
+    // 根据字体大小选择相应的显示方式
+    if(size == FONT_0806)
+    {
+        for(uint8_t t = 0; t < 8; t++) // 扫描8行
+        {
+            uint8_t temp = ascii_0806[ch][t]; // 获取字符的数据
+            for(uint8_t i = 0; i < 6; i++) // 一行6个点
+            {
+                if(temp & 0x80) // 有数据的点，显示字符颜色
+                    LCD_Draw_Point(x + i, y + t, color);
+                // 无背景版只绘制前景，忽略背景
+                
+                temp <<= 1; // 数据左移1位
+            }
+        }
+    }
+    else if(size == FONT_1206)
+    {
+        for(uint8_t t = 0; t < 12; t++) // 扫描12行
+        {
+            uint8_t temp = ascii_1206[ch][t]; // 获取字符的数据
+            for(uint8_t i = 0; i < 6; i++) // 一行6个点
+            {
+                if(temp & 0x80) // 有数据的点，显示字符颜色
+                    LCD_Draw_Point(x + i, y + t, color);
+                // 无背景版只绘制前景，忽略背景
+                
+                temp <<= 1; // 数据左移1位
+            }
+        }
+    }
+    else if(size == FONT_1608)
+    {
+        for(uint8_t t = 0; t < 16; t++) // 扫描16行
+        {
+            uint8_t temp = ascii_1608[ch][t]; // 获取字符的数据
+            for(uint8_t i = 0; i < 8; i++) // 一行8个点
+            {
+                if(temp & 0x80) // 有数据的点，显示字符颜色
+                    LCD_Draw_Point(x + i, y + t, color);
+                // 无背景版只绘制前景，忽略背景
+                
+                temp <<= 1; // 数据左移1位
+            }
+        }
+    }
+    else if(size == FONT_2412)
+    {
+        for(uint8_t t = 0; t < 24; t++) // 扫描24行
+        {
+            uint8_t temp1 = ascii_2412[ch][t*2];     // 获取字符数据的高字节
+            uint8_t temp2 = ascii_2412[ch][t*2+1];   // 获取字符数据的低字节
+            
+            // 处理第一个字节的8个点
+            for(uint8_t i = 0; i < 8; i++)
+            {
+                if(temp1 & 0x80) // 有数据的点，显示字符颜色
+                    LCD_Draw_Point(x + i, y + t, color);
+                // 无背景版只绘制前景，忽略背景
+                
+                temp1 <<= 1; // 数据左移1位
+            }
+            
+            // 处理第二个字节的4个点（注意：前面4位是有效的）
+            for(uint8_t i = 0; i < 4; i++)
+            {
+                if(temp2 & 0x80) // 有数据的点，显示字符颜色
+                    LCD_Draw_Point(x + 8 + i, y + t, color);
+                // 无背景版只绘制前景，忽略背景
+                
+                temp2 <<= 1; // 数据左移1位
+            }
+        }
+    }
+    // 其他字体大小直接忽略
+}
+
+/* 显示ASCII字符串(无背景版) */
+void LCD_Show_String_NoBG(uint16_t x, uint16_t y, const char *str, uint16_t color, uint8_t size)
+{
+    // 根据字体大小确定宽度
+    uint16_t char_width;
+    uint16_t char_height = size;
+    
+    if(size == FONT_0806) {
+        char_width = 6;
+    } else if(size == FONT_1206) {
+        char_width = 6;
+    } else if(size == FONT_1608) {
+        char_width = 8;
+    } else if(size == FONT_2010) {
+        char_width = 10;
+    } else if(size == FONT_2412) {
+        char_width = 12;
+    } else {
+        // 默认使用12x6字体
+        char_width = 6;
+        char_height = 12;
+    }
+    
+    while(*str != '\0')
+    {
+        LCD_Show_Char_NoBG(x, y, *str, color, size);
+        x += char_width; // 水平方向移动字符宽度
+        if(x > LCD_WIDTH-char_width) // 自动换行
+        {
+            x = 0;
+            y += char_height;
+        }
+        str++;
+    }
+}
+
 /* 显示时间样例 */
 void LCD_Show_Time(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t sec, uint16_t color, uint16_t bg_color, uint8_t size)
 {

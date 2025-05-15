@@ -267,3 +267,12 @@ void EXTI15_10_IRQHandler(void)
 /* HAL_GPIO_EXTI_Callback已移动到ads1220_task.c文件中 */
 
 /* USER CODE END 1 */
+// void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+// {
+
+//   if(GPIO_Pin == GPIO_PIN_10)
+//   {
+
+//   }
+
+// }

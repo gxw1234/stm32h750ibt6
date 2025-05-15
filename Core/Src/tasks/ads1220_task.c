@@ -242,7 +242,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if(GPIO_Pin == GPIO_PIN_10)
     {
-   
        SPI_CS2_LOW();
        uint32_t adc_value = 0;
        uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
@@ -251,8 +250,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        SPI_CS2_HIGH();
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
         float voltage = Convert_ADC_To_Voltage(adc_value);  
-        float current =  voltage * 4000+  0.296;
-
+        float current = 2008*voltage +  0.27 ;
         voltage_sum += current;
         raw_voltage_sum += voltage; // 累加原始电压值
         sample_count++;
@@ -261,31 +259,43 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         }
         if(sample_count >= 1000)
         {
+            // 定义静态变量保存屏幕参数
+            static uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
+            static uint16_t value_x = 90;  // 值显示的起始x坐标
+            static uint16_t current_y = 0;  // 动态计算
+            static uint16_t voltage_y = 0;  // 动态计算
+            static uint8_t first_display = 1; // 第一次显示标志
+            
+            // 计算平均值
             float avg_current = voltage_sum / sample_count;
             float avg_voltage = raw_voltage_sum / sample_count; // 计算平均电压值
-            char buffer1[80];
-            sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
-            printf(buffer1);
-            uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
-            uint16_t value_x = 90;  // 值显示的起始x坐标
-            uint16_t current_y = text_y + 20;  // 电流显示的y坐标，往下移动
-            uint16_t voltage_y = text_y - 10;  // 电压显示的y坐标，往下移动
-    
-            LCD_Show_String(5, current_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
-            LCD_Show_String(5, voltage_y, "Voltage:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
             
-            LCD_Fill_Rect(value_x, current_y - 2, LCD_WIDTH - 10, current_y + 18, COLOR_BLACK);
-            LCD_Fill_Rect(value_x, voltage_y - 2, LCD_WIDTH - 10, voltage_y + 18, COLOR_BLACK);
+            // // 输出到串口
+            // char buffer1[80];
+            // sprintf(buffer1, "current_uA:%.6f uA, avg_voltage:%.6f V\r\n", avg_current, avg_voltage);
+            // printf(buffer1);
             
-            char current_str[30];
+            // 首次显示时初始化坐标和绘制标签
+            if (first_display) {
+                current_y = text_y + 20;  // 电流显示的y坐标，往下移动
+                voltage_y = text_y - 10;  // 电压显示的y坐标，往下移动
+                
+                // 绘制固定标签，只绘制一次
+                LCD_Show_String(5, current_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+                LCD_Show_String(5, voltage_y, "Voltage:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+                
+                first_display = 0; // 清除首次显示标志
+            }
+            
+            // 格式化数值字符串
+            char current_str[30] = {0};
             sprintf(current_str, "%.3f uA", avg_current);
-            // 格式化显示电压值 (V)
-            char voltage_str[30];
+            char voltage_str[30] = {0};
             sprintf(voltage_str, "%.6f V", avg_voltage);
             
-            // 显示到LCD
-            LCD_Show_String(value_x, current_y, current_str, COLOR_GREEN, COLOR_BLACK, FONT_1608);
-            LCD_Show_String(value_x, voltage_y, voltage_str, COLOR_YELLOW, COLOR_BLACK, FONT_1608);
+            // 使用无背景显示函数，只绘制字符前景部分
+            LCD_Show_String_NoBG(value_x, current_y, current_str, COLOR_GREEN, FONT_1608);
+            LCD_Show_String_NoBG(value_x, voltage_y, voltage_str, COLOR_YELLOW, FONT_1608);
             
             // 如果启用了发送，则将所有积累的数据一次性发送
             if (sending_enabled && buffer_pos > 0) {
@@ -296,7 +306,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
                 // 重置缓冲区位置
                 buffer_pos = 0;
             }
-            
             /* 重置计数器和累加器 */
             voltage_sum = 0;
             raw_voltage_sum = 0; // 重置原始电压累加值
@@ -306,6 +315,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
      }
      else if(GPIO_Pin == GPIO_PIN_9)
      {
+
        SPI_CS1_LOW();
        uint32_t adc_value = 0;
        uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
@@ -314,34 +324,43 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        SPI_CS1_HIGH();
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
         float voltage = Convert_ADC_To_Voltage(adc_value);  
-        float current =  (voltage * 797 )*3+  0.202;
+        float current =  voltage *1189.7  +  0.222;
         voltage_sum_2 += current;
         sample_count_2++;
 
         if(sample_count_2 >= 1000)
         {
+        // 定义静态变量保存屏幕参数
+        static uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
+        static uint16_t value_x = 90;  // 值显示的起始x坐标
+        static uint16_t current_mA_y = 0; // 毫安电流显示的y坐标
+        static uint8_t first_display_mA = 1; // 毫安电流首次显示标志
+        
+        // 计算平均毫安电流
         float avg_current_mA = voltage_sum_2 / sample_count_2;
+        
+        // 输出到串口
         char buffer1[50];
-        // sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
-        // printf(buffer1); // 发送到串口
+        sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
+        printf(buffer1); // 发送到串口
         
-        // 定义LCD显示区域的位置（位置与GPIO_PIN_10不同，避免重叠）
-        uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
-        uint16_t value_x = 90;  // 值显示的起始x坐标
-        uint16_t current_mA_y = text_y + 50;  // 毫安电流显示的y坐标，比微安更下方
+        // 首次显示时初始化坐标和绘制标签
+        if (first_display_mA) {
+            // 计算毫安电流显示位置（位置与GPIO_PIN_10不同，避免重叠）
+            current_mA_y = text_y + 50;  // 毫安电流显示的y坐标，比微安更下方
+            
+            // 绘制固定标签，只绘制一次
+            LCD_Show_String(5, current_mA_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+            
+            first_display_mA = 0; // 清除首次显示标志
+        }
         
-        // 显示标签
-        LCD_Show_String(5, current_mA_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
-        
-        // 清除上一次显示的值
-        LCD_Fill_Rect(value_x, current_mA_y - 2, LCD_WIDTH - 10, current_mA_y + 18, COLOR_BLACK);
-        
-        // 格式化显示毫安电流值
-        char current_str[30];
+        // 格式化毫安电流值字符串
+        char current_str[30] = {0};
         sprintf(current_str, "%.3f mA", avg_current_mA);
         
-        // 显示到LCD
-        LCD_Show_String(value_x, current_mA_y, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
+        // 使用无背景显示函数，只绘制字符前景部分
+        LCD_Show_String_NoBG(value_x, current_mA_y, current_str, COLOR_CYAN, FONT_1608);
         
         /* 重置计数器和累加器 */
         voltage_sum_2 = 0;
