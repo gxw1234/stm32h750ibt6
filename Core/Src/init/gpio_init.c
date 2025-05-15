@@ -46,7 +46,7 @@ void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = GPIO_PIN_6;
   HAL_GPIO_Init(GPIOI, &GPIO_InitStruct);
   
-  /* 设置引脚初始状态 - 与原始工作项目一致 */
+
   HAL_GPIO_WritePin(GPIOG, GPIO_PIN_8, GPIO_PIN_SET);   // CS拉高，不选中
   HAL_GPIO_WritePin(GPIOG, GPIO_PIN_12, GPIO_PIN_SET);  // RST拉高
   HAL_GPIO_WritePin(GPIOI, GPIO_PIN_6, GPIO_PIN_RESET); // 背光打开（低电平激活）

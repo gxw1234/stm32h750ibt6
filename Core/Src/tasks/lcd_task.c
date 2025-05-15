@@ -700,19 +700,19 @@ void LCD_Task(void *pvParameters)
 
     
     // 显示各种字体大小示例
-    LCD_Draw_Line(0, text_y + 90, LCD_WIDTH-1, text_y + 90, COLOR_WHITE); // 水平分隔线
+    LCD_Draw_Line(0, text_y -30, LCD_WIDTH-1, text_y -30, COLOR_WHITE); // 水平分隔线
     
-    LCD_Show_String(5, text_y + 100, "0806:", COLOR_RED, COLOR_BLACK, FONT_0806);
-    LCD_Show_String(50, text_y + 100, "ABCDEF123", COLOR_RED, COLOR_BLACK, FONT_0806);
+    // LCD_Show_String(5, text_y + 100, "0806:", COLOR_RED, COLOR_BLACK, FONT_0806);
+    // LCD_Show_String(50, text_y + 100, "ABCDEF123", COLOR_RED, COLOR_BLACK, FONT_0806);
     
-    LCD_Show_String(5, text_y + 115, "1206:", COLOR_YELLOW, COLOR_BLACK, FONT_1206);
-    LCD_Show_String(50, text_y + 115, "ABCDEF123", COLOR_YELLOW, COLOR_BLACK, FONT_1206);
+    // LCD_Show_String(5, text_y + 115, "1206:", COLOR_YELLOW, COLOR_BLACK, FONT_1206);
+    // LCD_Show_String(50, text_y + 115, "ABCDEF123", COLOR_YELLOW, COLOR_BLACK, FONT_1206);
     
-    LCD_Show_String(5, text_y + 135, "1608:", COLOR_GREEN, COLOR_BLACK, FONT_1608);
-    LCD_Show_String(50, text_y + 135, "ABCDEF", COLOR_GREEN, COLOR_BLACK, FONT_1608);
+    // LCD_Show_String(5, text_y + 135, "1608:", COLOR_GREEN, COLOR_BLACK, FONT_1608);
+    // LCD_Show_String(50, text_y + 135, "ABCDEF", COLOR_GREEN, COLOR_BLACK, FONT_1608);
     
-    LCD_Show_String(5, text_y + 160, "2412:", COLOR_CYAN, COLOR_BLACK, FONT_2412);
-    LCD_Show_String(50, text_y + 160, "ABCD", COLOR_CYAN, COLOR_BLACK, FONT_2412);
+    // LCD_Show_String(5, text_y + 160, "2412:", COLOR_CYAN, COLOR_BLACK, FONT_2412);
+    // LCD_Show_String(50, text_y + 160, "ABCD", COLOR_CYAN, COLOR_BLACK, FONT_2412);
 
     // 初始化时间显示变量
     uint8_t hour = 15; // 初始化为当前时间 15点
