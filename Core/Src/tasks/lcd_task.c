@@ -830,9 +830,7 @@ void LCD_Draw_Current_Wave(uint16_t x, uint16_t y, uint16_t width, uint16_t heig
         }
         
         // 添加坐标轴标签
-        LCD_Show_String(x - 25, y, "mA", COLOR_WHITE, COLOR_BLACK, FONT_0806);       // Y轴标签
-        LCD_Show_String(x + width - 30, y + height + 15, "10s", COLOR_WHITE, COLOR_BLACK, FONT_0806); // X轴时间标签
-        
+        LCD_Show_String(x - 25, y, "mA", COLOR_WHITE, COLOR_BLACK, FONT_0806);       // Y轴标签        
         waveform.first_draw = 0;  // 设置为非第一次绘制
     }
     

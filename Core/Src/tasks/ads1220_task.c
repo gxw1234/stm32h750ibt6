@@ -2,6 +2,7 @@
 #include "tasks/lcd_task.h"  /* 包含 LCD 函数声明 */
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h> /* 添加 memcpy 函数的头文件 */
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
@@ -26,7 +27,9 @@ static uint8_t sample_count_threshold_reached = 0;
 float current_uA =0;
 float current_mA =0;
 
-#define DATA_BUFFER_SIZE 20000  // 足够存储1000个浮点数和换行符
+float current_send_temp =0;
+
+#define DATA_BUFFER_SIZE 20000  // 足够存储1000个浮点值的字符串和换行符
 static uint8_t data_buffer[DATA_BUFFER_SIZE];  // 大的数据缓冲区
 static uint8_t sending_enabled = 0;  // 是否启用数据发送
 static uint32_t buffer_pos = 0;  // 数据缓冲区当前位置
@@ -80,7 +83,6 @@ void ADS1220_Task(void *argument)
     ADS1220_Init();
     vTaskDelay(pdMS_TO_TICKS(1));
     SPI_CS1_LOW();
-    /* 发送复位命令 */
     SPI_Transmit(0x06);  // RESET命令
     vTaskDelay(pdMS_TO_TICKS(1)); 
     SPI_Transmit(0x43);  // WREG命令，写寄存器3
@@ -98,7 +100,6 @@ void ADS1220_Task(void *argument)
     printf("--------System Start!\r\n");
 
     SPI_CS2_LOW();
-    /* 发送复位命令 */
     SPI_Transmit(0x06);  // RESET命令
     vTaskDelay(pdMS_TO_TICKS(1)); 
     SPI_Transmit(0x43);  // WREG命令，写寄存器3
@@ -123,10 +124,14 @@ void ADS1220_Task(void *argument)
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
     printf("ADS1220_Task\n");
     LCD_Show_String(5, CURRENT_MA_Y_POS, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
-    LCD_Show_String(WAVE_X, WAVE_Y-15, "Current", COLOR_WHITE, COLOR_BLACK, FONT_0806);
     LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
     while(1) {
         if(sample_count_threshold_reached) {
+            // 当达到阈值且数据发送功能启用时，发送所有收集的数据
+            if (sending_enabled && buffer_pos > 0) {
+                CDC_Transmit_HS(data_buffer, buffer_pos);
+                buffer_pos = 0; // 重置缓冲区位置
+            }
             float avg_current_mA = current_mA / 1000;  
             char buffer1[50];
             sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA);
@@ -138,6 +143,7 @@ void ADS1220_Task(void *argument)
             LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
             current_mA = 0;  
             sample_count_threshold_reached = 0; 
+            sample_count_2 = 0; // 重置计数器
         }
         vTaskDelay(1 / portTICK_PERIOD_MS);
     }
@@ -145,7 +151,6 @@ void ADS1220_Task(void *argument)
 
 void ADS1220_Init(void)
 {
-        /* SPI4 参数配置 */
         hspi4.Instance = SPI4;
         hspi4.Init.Mode = SPI_MODE_MASTER;
         hspi4.Init.Direction = SPI_DIRECTION_2LINES;
@@ -191,13 +196,11 @@ void SPI_Transmit(uint8_t data) {
     uint8_t txData[] = {data};  // 发送数据缓冲区
     uint8_t rxData[1];          // 接收数据缓冲区
 
-    /* 同时发送和接收数据 */
     if(HAL_SPI_TransmitReceive(&hspi4, txData, rxData, sizeof(txData), 100) != HAL_OK)
     {
         Error_Handler();
     }
 
-    /* 打印发送和接收的数据 */
     printf("SPI: TX=0x%02X, RX=0x%02X\r\n", txData[0], rxData[0]);
 }
 
@@ -232,7 +235,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        SPI_CS2_HIGH();
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
         float voltage = Convert_ADC_To_Voltage(adc_value);  
-        current_uA = 2008*voltage +  0.27 ;
+        current_uA = (2008*voltage +  0.27) /1000 ;
         // // 输出到串口
         // char buffer1[80];
         // sprintf(buffer1, "current_uA:%.6f uA\r\n", current_uA);
@@ -240,7 +243,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
      }
      else if(GPIO_Pin == GPIO_PIN_9)
      {
-
        SPI_CS1_LOW();
        uint32_t adc_value = 0;
        uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
@@ -248,24 +250,36 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
        SPI_CS1_HIGH();
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
-        float voltage = Convert_ADC_To_Voltage(adc_value);  
-        float current_temp =  voltage *1189.7  +  0.222;
-        if( current_temp <1)
-        {
-            if(current_uA!=0)
-            {
-                current_mA  +=current_uA;
+       float voltage = Convert_ADC_To_Voltage(adc_value);  
+       float current_temp = voltage * 1189.7 + 0.222;
+
+       uint8_t data_type = 0; // 0表示毫安，1表示微安
+       
+       if (current_temp < 1)
+       {
+           if(current_uA != 0)
+           {
+                current_send_temp = current_uA;
+                current_mA += current_uA;
+                data_type = 1; // 微安数据
+                printf("9");
+           }
+       } else
+       {
+           current_mA += current_temp;
+           current_send_temp = current_temp;
+           data_type = 0; // 毫安数据
+       }
+       if (sending_enabled && buffer_pos < DATA_BUFFER_SIZE - sizeof(float) - 1) { // 为安全预留足够空间
+            data_buffer[buffer_pos++] = data_type;
+            memcpy(&data_buffer[buffer_pos], &current_send_temp, sizeof(float));
+            buffer_pos += sizeof(float);
             }
-        }else
-        {
-            current_mA += current_temp;
-        }
-        sample_count_2++;
-        if(sample_count_2 >= 1000)
-        {
-            sample_count_threshold_reached = 1; 
-            sample_count_2 = 0;
-        }
+       sample_count_2++;
+       if(sample_count_2 >= 1000)
+       {
+           sample_count_threshold_reached = 1; 
+       }
      }
    
 
