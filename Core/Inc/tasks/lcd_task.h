@@ -46,6 +46,10 @@ void LCD_Show_String(uint16_t x, uint16_t y, const char *str, uint16_t color, ui
 void LCD_Show_Char_NoBG(uint16_t x, uint16_t y, uint8_t ch, uint16_t color, uint8_t size);
 void LCD_Show_String_NoBG(uint16_t x, uint16_t y, const char *str, uint16_t color, uint8_t size);
 
+/* 电流波形图相关函数 */
+void LCD_Add_Current_Point(float current_mA);
+void LCD_Draw_Current_Wave(uint16_t x, uint16_t y, uint16_t width, uint16_t height);
+
 /* FreeRTOS任务函数声明 */
 void LCD_Task(void *pvParameters);
 

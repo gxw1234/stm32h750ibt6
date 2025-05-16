@@ -2,10 +2,8 @@
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h> // 用于abs()函数
 #include "Font_library/fonts.h"
-
-
-
 
 /* ST7789 LCD引脚定义 */
 #define LCD_MOSI_PORT   GPIOG
@@ -675,6 +673,301 @@ void LCD_Show_Time(uint16_t x, uint16_t y, uint8_t hour, uint8_t min, uint8_t se
     char time_str[9];
     sprintf(time_str, "%02d:%02d:%02d", hour, min, sec);
     LCD_Show_String(x, y, time_str, color, bg_color, size);
+}
+
+/* 波形图结构体及相关变量 */
+#define WAVE_MAX_POINTS 220   // 波形图最大点数
+
+typedef struct {
+    float min_value;                     // 最小值
+    float max_value;                     // 最大值
+    float data[WAVE_MAX_POINTS];         // 数据点缓冲
+    uint16_t data_count;                 // 当前数据点数量
+    uint16_t display_start;              // 当前显示的起始位置
+    uint8_t first_draw;                  // 标记是否是第一次绘制
+} WaveformData;
+
+// 全局波形图数据
+static WaveformData waveform = {0};
+
+/**
+ * @brief 初始化波形图数据
+ */
+void LCD_Init_Waveform(void)
+{
+    memset(&waveform, 0, sizeof(WaveformData));
+    // 初始化最大最小值为一个无效范围，确保第一个数据点会更新这些值
+    waveform.min_value = 99999.0f;
+    waveform.max_value = -99999.0f;
+    waveform.first_draw = 1;  // 标记为第一次绘制
+    waveform.data_count = 0;
+    waveform.display_start = 0;
+}
+
+/**
+ * @brief 添加新的电流值到波形图中
+ * @param current_mA 新的电流值(mA)
+ */
+void LCD_Add_Current_Point(float current_mA)
+{
+    // 如果波形图还没有初始化，先初始化
+    if (waveform.min_value > waveform.max_value) {
+        LCD_Init_Waveform();
+    }
+    
+    // 更新最大最小值
+    if (current_mA < waveform.min_value) {
+        waveform.min_value = current_mA;
+    }
+    
+    if (current_mA > waveform.max_value) {
+        waveform.max_value = current_mA;
+    }
+    
+    // 添加新数据点
+    if (waveform.data_count < WAVE_MAX_POINTS) {
+        // 如果缓冲区没满，直接添加
+        waveform.data[waveform.data_count] = current_mA;
+        waveform.data_count++;
+    } else {
+        // 缓冲区已满，移动所有数据并添加新点
+        for (int i = 0; i < WAVE_MAX_POINTS - 1; i++) {
+            waveform.data[i] = waveform.data[i + 1];
+        }
+        waveform.data[WAVE_MAX_POINTS - 1] = current_mA;
+        
+        // 调整显示起始位置以保持滚动效果
+        if (waveform.display_start > 0) {
+            waveform.display_start--;
+        }
+    }
+}
+
+/**
+ * @brief 绘制电流波形图，像示波器一样从左到右绘制，并实现连续滚动
+ * @param x 左上角X坐标
+ * @param y 左上角Y坐标
+ * @param width 波形图宽度
+ * @param height 波形图高度
+ */
+void LCD_Draw_Current_Wave(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
+{
+    // 如果没有数据点，不绘制
+    if (waveform.data_count == 0) {
+        return;
+    }
+    
+    // 计算最大值和最小值，加上空白边距
+    float min_current = waveform.min_value * 0.9f;  // 添加10%的空白
+    float max_current = waveform.max_value * 1.1f;  // 添加10%的空白
+    
+    // 确保有一个最小范围
+    if (max_current - min_current < 0.1f) {
+        float center = (max_current + min_current) / 2.0f;
+        max_current = center + 0.05f;
+        min_current = center - 0.05f;
+    }
+    
+    // 如果最小值是负数，调整为0
+    if (min_current < 0) {
+        min_current = 0;
+    }
+    
+    // 如果是第一次绘制或者电流范围变化较大，重绘背景和坐标轴
+    static float last_min_current = 0;
+    static float last_max_current = 0;
+    
+    if (waveform.first_draw || 
+        fabs(last_min_current - min_current) > 0.1f || 
+        fabs(last_max_current - max_current) > 0.1f) {
+        
+        // 保存这次的范围值
+        last_min_current = min_current;
+        last_max_current = max_current;
+        
+        // 清除波形图区域
+        LCD_Fill_Rect(x, y, x + width - 1, y + height - 1, COLOR_BLACK);
+        
+        // 绘制坐标轴
+        LCD_Draw_Line(x, y, x, y + height - 1, COLOR_WHITE);         // Y轴（电流）
+        LCD_Draw_Line(x, y + height - 1, x + width - 1, y + height - 1, COLOR_WHITE); // X轴（时间）
+        
+        // 绘制Y轴刻度和水平网格线
+        float current_step = (max_current - min_current) / 5.0f;
+        char scale_str[10];
+        
+        for (int i = 0; i <= 5; i++) {
+            uint16_t scale_y = y + height - 1 - (i * (height - 1) / 5);
+            
+            // 绘制水平线（Y轴刻度线）
+            LCD_Draw_Line(x, scale_y, x + 3, scale_y, COLOR_WHITE);
+            
+            // 绘制水平虚线
+            if (i > 0 && i < 5) {
+                for (int j = 0; j < width - 1; j += 2) {
+                    LCD_Draw_Point(x + j, scale_y, COLOR_CYAN);  // 绘制虚线
+                }
+            }
+            
+            // 绘制电流值（Y轴刻度值）
+            float scale_value = min_current + i * current_step;
+            sprintf(scale_str, "%.1f", scale_value);
+            LCD_Show_String(x - 20, scale_y - 4, scale_str, COLOR_WHITE, COLOR_BLACK, FONT_0806);
+        }
+        
+        // 绘制X轴时间刻度（10秒）
+        for (int i = 0; i <= 5; i++) {
+            uint16_t scale_x = x + (width * i) / 5;
+            // 绘制时间刻度线
+            LCD_Draw_Line(scale_x, y + height - 3, scale_x, y + height, COLOR_WHITE);
+            
+            // 绘制时间刻度值 - 时间从左到右为0-10秒
+            if (i <= 5) {
+                char time_str[10];
+                sprintf(time_str, "%ds", i * 2); // 0, 2, 4, 6, 8, 10秒
+                LCD_Show_String(scale_x - 8, y + height + 2, time_str, COLOR_WHITE, COLOR_BLACK, FONT_0806);
+            }
+        }
+        
+        // 添加坐标轴标签
+        LCD_Show_String(x - 25, y, "mA", COLOR_WHITE, COLOR_BLACK, FONT_0806);       // Y轴标签
+        LCD_Show_String(x + width - 30, y + height + 15, "10s", COLOR_WHITE, COLOR_BLACK, FONT_0806); // X轴时间标签
+        
+        waveform.first_draw = 0;  // 设置为非第一次绘制
+    }
+    
+    // 存储网格线的Y坐标位置
+    static uint16_t grid_lines[5]; // 最多5条水平网格线
+    static uint8_t grid_count = 0;
+    static uint8_t last_wave_drawn = 0;  // 上次波形的像素点记录
+    static uint16_t last_wave_points[240][2];  // [x][0]=y坐标, [x][1]=1表示有效
+    
+    // 第一次运行或缩放变化时更新网格线位置
+    if (grid_count == 0 || waveform.first_draw) {
+        // 记录网格线位置(只需要y坐标)
+        grid_count = 0;
+        for (int i = 1; i < 5; i++) {
+            grid_lines[grid_count++] = y + height - 1 - (i * (height - 1) / 5);
+        }
+        
+        // 初始化时完全清除波形区域
+        LCD_Fill_Rect(x + 1, y + 1, x + width - 2, y + height - 2, COLOR_BLACK);
+        
+        // 绘制水平网格线
+        for (int i = 0; i < grid_count; i++) {
+            for (int j = x + 1; j < x + width - 1; j += 2) {
+                LCD_Draw_Point(j, grid_lines[i], COLOR_CYAN);
+            }
+        }
+        
+        // 清除波形记录
+        memset(last_wave_points, 0, sizeof(last_wave_points));
+        last_wave_drawn = 0;
+    } else {
+        // 仅擦除上次波形绘制的点，保留网格
+        if (last_wave_drawn) {
+            for (uint16_t i = 0; i < width; i++) {
+                if (last_wave_points[i][1]) { // 如果这个位置有波形线
+                    uint16_t px = x + 1 + i;
+                    uint16_t py = last_wave_points[i][0];
+                    
+                    // 检查这个点是否在网格线上
+                    uint8_t is_grid = 0;
+                    for (int g = 0; g < grid_count; g++) {
+                        if (py == grid_lines[g]) {
+                            is_grid = 1;
+                            break;
+                        }
+                    }
+                    
+                    // 如果在网格线上，重绘网格点，否则清除
+                    if (is_grid && (i % 2 == 0)) {
+                        LCD_Draw_Point(px, py, COLOR_CYAN);
+                    } else {
+                        LCD_Draw_Point(px, py, COLOR_BLACK);
+                    }
+                }
+            }
+        }
+    }
+    
+    // 重置波形记录
+    memset(last_wave_points, 0, sizeof(last_wave_points));
+    last_wave_drawn = 1;
+    
+    // 计算每个像素代表的数据点数量
+    float points_per_pixel = (float)waveform.data_count / (float)(width - 2);
+    if (points_per_pixel < 1.0f) points_per_pixel = 1.0f;
+    
+    // 绘制波形
+    uint16_t prev_x = 0, prev_y = 0;
+    uint8_t first_point = 1;
+    
+    for (uint16_t i = 0; i < width - 2; i++) {
+        uint16_t data_idx = (uint16_t)(i * points_per_pixel);
+        if (data_idx >= waveform.data_count) break;
+        
+        // 计算Y坐标
+        float current_val = waveform.data[data_idx];
+        uint16_t current_y = y + height - 1 - (uint16_t)((current_val - min_current) * (height - 1) / (max_current - min_current));
+        
+        // 限制Y坐标在有效范围内
+        if (current_y < y + 1) current_y = y + 1;
+        if (current_y >= y + height - 1) current_y = y + height - 2;
+        
+        // 绘制点或线
+        uint16_t current_x = x + 1 + i;
+        
+        if (!first_point) {
+            // 连接当前点和上一个点
+            // 使用布莱森汇线算法绘制线段并记录每个点
+            int dx = abs(current_x - prev_x);
+            int dy = abs(current_y - prev_y);
+            int sx = prev_x < current_x ? 1 : -1;
+            int sy = prev_y < current_y ? 1 : -1;
+            int err = dx - dy;
+            int e2;
+            
+            uint16_t temp_x = prev_x;
+            uint16_t temp_y = prev_y;
+            
+            while (1) {
+                // 绘制当前点
+                LCD_Draw_Point(temp_x, temp_y, COLOR_YELLOW);
+                
+                // 记录这个波形点位置
+                if (temp_x >= x + 1 && temp_x < x + width - 1) {
+                    uint16_t index = temp_x - (x + 1);
+                    if (index < width) {
+                        last_wave_points[index][0] = temp_y; // 记录y坐标
+                        last_wave_points[index][1] = 1;    // 标记为有效
+                    }
+                }
+                
+                // 到达终点时退出
+                if (temp_x == current_x && temp_y == current_y) break;
+                
+                e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; temp_x += sx; }
+                if (e2 < dx) { err += dx; temp_y += sy; }
+            }
+        } else {
+            // 第一个点
+            first_point = 0;
+            LCD_Draw_Point(current_x, current_y, COLOR_YELLOW);
+            
+            // 记录这个点
+            uint16_t index = current_x - (x + 1);
+            if (index < width) {
+                last_wave_points[index][0] = current_y;
+                last_wave_points[index][1] = 1;
+            }
+        }
+        
+        // 记录当前点作为下一个线段的起点
+        prev_x = current_x;
+        prev_y = current_y;
+    }
 }
 
 /* LCD任务主函数 */

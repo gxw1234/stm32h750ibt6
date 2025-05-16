@@ -1,6 +1,7 @@
 #include "tasks/ads1220_task.h"
 #include "tasks/lcd_task.h"  /* 包含 LCD 函数声明 */
 #include <stdio.h>
+#include <stdlib.h>
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
@@ -132,30 +133,50 @@ void ADS1220_Task(void *argument)
 
     vTaskDelay(pdMS_TO_TICKS(1));
 
-    /* EXTI interrupt init for PH9 */
+    /* PH9  微安中断  */
     HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
     
-    /* EXTI interrupt init for PH10 */
+    /* PH10 毫安中断 */
     HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
 
-
-
     printf("ADS1220_Task\n");
+    
+    // 显示区域定义
     #define TEXT_Y_POS ((LCD_HEIGHT - 12)/2)  // 使用屏幕中心
     #define VALUE_X_POS 90  // 值显示的起始x坐标
     #define CURRENT_MA_Y_POS (TEXT_Y_POS - 70)  // 毫安电流显示的y坐标
+    
+    // 波形图区域定义
+    #define WAVE_X 10                 // 波形图左上角X坐标
+    #define WAVE_Y 80                 // 波形图左上角Y坐标
+    #define WAVE_WIDTH (LCD_WIDTH-20) // 波形图宽度
+    #define WAVE_HEIGHT 100           // 波形图高度
+    
+    // 显示标题
     LCD_Show_String(5, CURRENT_MA_Y_POS, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
+    
+    // 初始化波形图区域
+    LCD_Show_String(WAVE_X, WAVE_Y-15, "Current", COLOR_WHITE, COLOR_BLACK, FONT_0806);
+    LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
     while(1) {
         if(sample_count_threshold_reached) {
-            float avg_current_mA = current_mA / 1000;  // 使用1000作为样本数量
+            float avg_current_mA = current_mA / 1000;  
             char buffer1[50];
-            sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
+            sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA);
             printf(buffer1); 
+            
+            // 显示当前电流值
             char current_str[30] = {0};
             sprintf(current_str, "%.3f mA", avg_current_mA);
             LCD_Show_String(VALUE_X_POS, CURRENT_MA_Y_POS, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
+            
+
+            LCD_Add_Current_Point(avg_current_mA);
+            LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
+           
+            
             current_mA = 0;  
             sample_count_threshold_reached = 0; 
         }
@@ -181,28 +202,11 @@ void ADS1220_Init(void)
         hspi4.Init.NSSPMode = SPI_NSS_PULSE_DISABLE;
         hspi4.Init.FifoThreshold = SPI_FIFO_THRESHOLD_01DATA;
         hspi4.Init.MasterKeepIOState = SPI_MASTER_KEEP_IO_STATE_ENABLE;
-    
-    
-    
       if (HAL_SPI_Init(&hspi4) != HAL_OK)
       {
         Error_Handler();
       }
-    
-    
-    
-    
-    
-    
-      /* USER CODE BEGIN SPI4_Init 2 */
-      /* CS引脚配置 */
       GPIO_InitTypeDef GPIO_InitStruct = {0};
-      
-    
-    
-    
-    
-      /* CS1引脚配置 */
       GPIO_InitStruct.Pin = GPIO_PIN_11;
       GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
       GPIO_InitStruct.Pull = GPIO_PULLUP;
