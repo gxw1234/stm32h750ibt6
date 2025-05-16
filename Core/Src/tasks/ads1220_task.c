@@ -5,14 +5,13 @@
 #include "usb_device.h"
 #include "usbd_cdc_if.h"
 
+
 #define SPI_CS1_LOW()       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_RESET)
 #define SPI_CS1_HIGH()      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET)
-
-/* CS2引脚控制宏定义 */
 #define SPI_CS2_LOW()       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_RESET)
 #define SPI_CS2_HIGH()      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET)
 
-/* SPI句柄定义 */
+
 SPI_HandleTypeDef hspi4;
 
 
@@ -21,17 +20,24 @@ static float voltage_sum = 0;
 
 
 static uint32_t sample_count_2 = 0;
-static uint8_t sample_count_threshold_reached = 0; // Flag for sample_count_2 >= 1000
+static uint8_t sample_count_threshold_reached = 0; 
 
 
 float current_uA =0;
 float current_mA =0;
 
-// 电压数据发送相关变量
 #define DATA_BUFFER_SIZE 20000  // 足够存储1000个浮点数和换行符
 static uint8_t data_buffer[DATA_BUFFER_SIZE];  // 大的数据缓冲区
 static uint8_t sending_enabled = 0;  // 是否启用数据发送
 static uint32_t buffer_pos = 0;  // 数据缓冲区当前位置
+#define TEXT_Y_POS ((LCD_HEIGHT - 12)/2)  // 使用屏幕中心
+#define VALUE_X_POS 90  // 值显示的起始x坐标
+#define CURRENT_MA_Y_POS (TEXT_Y_POS - 70)  // 毫安电流显示的y坐标
+#define WAVE_X 10                 // 波形图左上角X坐标
+#define WAVE_Y 80                 // 波形图左上角Y坐标
+#define WAVE_WIDTH (LCD_WIDTH-20) // 波形图宽度
+#define WAVE_HEIGHT 100           // 波形图高度
+
 
 /**
  * @brief 启用电压数据发送
@@ -47,29 +53,19 @@ void Enable_Current_Data_Sending(void) {
 void Disable_Current_Data_Sending(void) {
     sending_enabled = 0;  // 关闭发送开关
 }
-
-// uint32_t adc_value = 0;
-
-/* ADS1220参考电压 */
 #define VREF              2.048f    // 参考电压2.048V
 #define ADC_FSR           8388608.0f // 2^23, ADC满量程范围
 
-
-/* 将24位ADC数据转换为电压值 */
 static float Convert_ADC_To_Voltage(uint32_t adc_value)
 {
     int32_t signed_value;
     float voltage;
     uint32_t temp = 0;
-    
-    // 如果是负数（最高位为1）
     if(adc_value & 0x800000) {
         signed_value = (int32_t)(adc_value| 0xFF000000);
     } else {
         signed_value = (int32_t)adc_value;
     }
-    
-    // 将补码转换为电压值
     voltage = ((float)signed_value * VREF) / ADC_FSR;
 
     return voltage;
@@ -79,18 +75,14 @@ static float Convert_ADC_To_Voltage(uint32_t adc_value)
 void ADS1220_Task(void *argument)
 {
 
+
     vTaskDelay(3000 / portTICK_PERIOD_MS);
     ADS1220_Init();
-
     vTaskDelay(pdMS_TO_TICKS(1));
-
     SPI_CS1_LOW();
     /* 发送复位命令 */
     SPI_Transmit(0x06);  // RESET命令
-
     vTaskDelay(pdMS_TO_TICKS(1)); 
-
-
     SPI_Transmit(0x43);  // WREG命令，写寄存器3
     SPI_Transmit(0x00);  // 配置数据 - 寄存器0：PGA=1, AIN0/AIN1
     SPI_Transmit(0xD4);  // 配置数据 - 寄存器1：DR=20SPS, 连续转换模式
@@ -101,63 +93,36 @@ void ADS1220_Task(void *argument)
     vTaskDelay(pdMS_TO_TICKS(1)); 
     SPI_Transmit(0x08);  
     vTaskDelay(pdMS_TO_TICKS(1)); 
-
     SPI_CS1_HIGH();
-
     vTaskDelay(pdMS_TO_TICKS(1)); 
     printf("--------System Start!\r\n");
-
-
 
     SPI_CS2_LOW();
     /* 发送复位命令 */
     SPI_Transmit(0x06);  // RESET命令
-
     vTaskDelay(pdMS_TO_TICKS(1)); 
-
-
     SPI_Transmit(0x43);  // WREG命令，写寄存器3
     SPI_Transmit(0x00);  // 配置数据 - 寄存器0：PGA=1, AIN0/AIN1
     SPI_Transmit(0xD4);  // 配置数据 - 寄存器1：DR=20SPS, 连续转换模式
     SPI_Transmit(0x17);  // 配置数据 - 寄存器2：IDAC关闭
     SPI_Transmit(0xA0);  // 配置数据 - 寄存器3：默认设置
     vTaskDelay(pdMS_TO_TICKS(1)); 
-
     SPI_Transmit(0x23);
     vTaskDelay(pdMS_TO_TICKS(1)); 
-
     SPI_Transmit(0x08);  
     vTaskDelay(pdMS_TO_TICKS(1));
-
     SPI_CS2_HIGH();
-
     vTaskDelay(pdMS_TO_TICKS(1));
 
     /* PH9  微安中断  */
-    HAL_NVIC_SetPriority(EXTI9_5_IRQn, 1, 0);
+    HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
     
     /* PH10 毫安中断 */
-    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 1, 0);
+    HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-
     printf("ADS1220_Task\n");
-    
-    // 显示区域定义
-    #define TEXT_Y_POS ((LCD_HEIGHT - 12)/2)  // 使用屏幕中心
-    #define VALUE_X_POS 90  // 值显示的起始x坐标
-    #define CURRENT_MA_Y_POS (TEXT_Y_POS - 70)  // 毫安电流显示的y坐标
-    
-    // 波形图区域定义
-    #define WAVE_X 10                 // 波形图左上角X坐标
-    #define WAVE_Y 80                 // 波形图左上角Y坐标
-    #define WAVE_WIDTH (LCD_WIDTH-20) // 波形图宽度
-    #define WAVE_HEIGHT 100           // 波形图高度
-    
-    // 显示标题
     LCD_Show_String(5, CURRENT_MA_Y_POS, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
-    
-    // 初始化波形图区域
     LCD_Show_String(WAVE_X, WAVE_Y-15, "Current", COLOR_WHITE, COLOR_BLACK, FONT_0806);
     LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
     while(1) {
@@ -166,17 +131,11 @@ void ADS1220_Task(void *argument)
             char buffer1[50];
             sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA);
             printf(buffer1); 
-            
-            // 显示当前电流值
             char current_str[30] = {0};
             sprintf(current_str, "%.3f mA", avg_current_mA);
             LCD_Show_String(VALUE_X_POS, CURRENT_MA_Y_POS, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
-            
-
             LCD_Add_Current_Point(avg_current_mA);
             LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
-           
-            
             current_mA = 0;  
             sample_count_threshold_reached = 0; 
         }
@@ -259,6 +218,8 @@ uint8_t SPI_TransmitReceive(uint8_t data) {
   * @param GPIO_Pin: Pin connected to EXTI line
   * @retval None
   */
+
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if(GPIO_Pin == GPIO_PIN_10)
@@ -276,12 +237,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         // char buffer1[80];
         // sprintf(buffer1, "current_uA:%.6f uA\r\n", current_uA);
         // printf(buffer1);
-        
-    
-            
-
-
-       
      }
      else if(GPIO_Pin == GPIO_PIN_9)
      {
@@ -295,7 +250,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
         float voltage = Convert_ADC_To_Voltage(adc_value);  
         float current_temp =  voltage *1189.7  +  0.222;
-
         if( current_temp <1)
         {
             if(current_uA!=0)
@@ -309,12 +263,12 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         sample_count_2++;
         if(sample_count_2 >= 1000)
         {
-            sample_count_threshold_reached = 1; // 设置标志位
-            // 不在回调函数中执行处理逻辑，移至主循环中处理
-            // 仅重置计数器
+            sample_count_threshold_reached = 1; 
             sample_count_2 = 0;
         }
      }
    
-     
+
+   
+
 }
