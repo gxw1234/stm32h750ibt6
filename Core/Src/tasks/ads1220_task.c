@@ -20,6 +20,7 @@ static float voltage_sum = 0;
 
 
 static uint32_t sample_count_2 = 0;
+static uint8_t sample_count_threshold_reached = 0; // Flag for sample_count_2 >= 1000
 
 
 float current_uA =0;
@@ -142,8 +143,23 @@ void ADS1220_Task(void *argument)
 
 
     printf("ADS1220_Task\n");
+    #define TEXT_Y_POS ((LCD_HEIGHT - 12)/2)  // 使用屏幕中心
+    #define VALUE_X_POS 90  // 值显示的起始x坐标
+    #define CURRENT_MA_Y_POS (TEXT_Y_POS - 70)  // 毫安电流显示的y坐标
+    LCD_Show_String(5, CURRENT_MA_Y_POS, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
     while(1) {
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
+        if(sample_count_threshold_reached) {
+            float avg_current_mA = current_mA / 1000;  // 使用1000作为样本数量
+            char buffer1[50];
+            sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
+            printf(buffer1); 
+            char current_str[30] = {0};
+            sprintf(current_str, "%.3f mA", avg_current_mA);
+            LCD_Show_String(VALUE_X_POS, CURRENT_MA_Y_POS, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
+            current_mA = 0;  
+            sample_count_threshold_reached = 0; 
+        }
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 }
 
@@ -203,11 +219,9 @@ void ADS1220_Init(void)
       HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
       /* CS2默认高电平 */
       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
-    
       /* 所有初始化完成后，启用EXTI中断 */
       printf("ADS1220 initialization completed, enabling EXTI interrupts\r\n");
       
-
 }
 
 void SPI_Transmit(uint8_t data) {
@@ -291,29 +305,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
         sample_count_2++;
         if(sample_count_2 >= 1000)
         {
-      
-        static uint16_t text_y = (LCD_HEIGHT - 12)/2; // 使用屏幕中心
-        static uint16_t value_x = 90;  // 值显示的起始x坐标
-        static uint16_t current_mA_y = 0; // 毫安电流显示的y坐标
-        static uint8_t first_display_mA = 1; // 毫安电流首次显示标志
-
-        float avg_current_mA = current_mA / sample_count_2;
-        
-
-        char buffer1[50];
-        sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA); // 格式化为两位小数
-        printf(buffer1); // 发送到串口
-
-        if (first_display_mA) {
-            current_mA_y = text_y - 70;  // 毫安电流显示的y坐标，比微安更下方
-            LCD_Show_String(5, current_mA_y, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
-            first_display_mA = 0; // 清除首次显示标志
-        }
-        char current_str[30] = {0};
-        sprintf(current_str, "%.3f mA", avg_current_mA);
-        LCD_Show_String(value_x, current_mA_y, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
-        current_mA = 0;
-        sample_count_2 = 0;
+            sample_count_threshold_reached = 1; // 设置标志位
+            // 不在回调函数中执行处理逻辑，移至主循环中处理
+            // 仅重置计数器
+            sample_count_2 = 0;
         }
      }
    
