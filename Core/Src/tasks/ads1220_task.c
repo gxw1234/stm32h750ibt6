@@ -253,7 +253,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        float voltage = Convert_ADC_To_Voltage(adc_value);  
        float current_temp = voltage * 1189.7 + 0.222;
 
-       uint8_t data_type = 0; // 0表示毫安，1表示微安
+       uint8_t data_type = 0; 
        
        if (current_temp < 1)
        {
@@ -270,7 +270,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
            current_send_temp = current_temp;
            data_type = 0; // 毫安数据
        }
-       if (sending_enabled && buffer_pos < DATA_BUFFER_SIZE - sizeof(float) - 1) { // 为安全预留足够空间
+       if (sending_enabled && buffer_pos < DATA_BUFFER_SIZE - sizeof(float) - 1) { 
             data_buffer[buffer_pos++] = data_type;
             memcpy(&data_buffer[buffer_pos], &current_send_temp, sizeof(float));
             buffer_pos += sizeof(float);
