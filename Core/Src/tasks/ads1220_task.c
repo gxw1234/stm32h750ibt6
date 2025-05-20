@@ -33,11 +33,10 @@ float current_send_temp =0;
 static uint8_t data_buffer[DATA_BUFFER_SIZE];  // 大的数据缓冲区
 static uint8_t sending_enabled = 0;  // 是否启用数据发送
 static uint32_t buffer_pos = 0;  // 数据缓冲区当前位置
-#define TEXT_Y_POS ((LCD_HEIGHT - 12)/2)  // 使用屏幕中心
-#define VALUE_X_POS 90  // 值显示的起始x坐标
-#define CURRENT_MA_Y_POS (TEXT_Y_POS - 70)  // 毫安电流显示的y坐标
+#define VALUE_X_POS 90  
+#define CURRENT_MA_Y_POS 44  
 #define WAVE_X 10                 // 波形图左上角X坐标
-#define WAVE_Y 80                 // 波形图左上角Y坐标
+#define WAVE_Y 120                 // 波形图左上角Y坐标
 #define WAVE_WIDTH (LCD_WIDTH-20) // 波形图宽度
 #define WAVE_HEIGHT 100           // 波形图高度
 
@@ -70,9 +69,7 @@ static float Convert_ADC_To_Voltage(uint32_t adc_value)
         signed_value = (int32_t)adc_value;
     }
     voltage = ((float)signed_value * VREF) / ADC_FSR;
-
     return voltage;
-
 }
 
 void ADS1220_Task(void *argument)
@@ -122,7 +119,7 @@ void ADS1220_Task(void *argument)
     /* PH10 毫安中断 */
     HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
     HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-    printf("ADS1220_Task\n");
+
     LCD_Show_String(5, CURRENT_MA_Y_POS, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
     LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
     while(1) {
@@ -135,7 +132,7 @@ void ADS1220_Task(void *argument)
             float avg_current_mA = current_mA / 1000;  
             char buffer1[50];
             sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA);
-            printf(buffer1); 
+            // printf(buffer1); 
             char current_str[30] = {0};
             sprintf(current_str, "%.3f mA", avg_current_mA);
             LCD_Show_String(VALUE_X_POS, CURRENT_MA_Y_POS, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
@@ -193,8 +190,8 @@ void ADS1220_Init(void)
 }
 
 void SPI_Transmit(uint8_t data) {
-    uint8_t txData[] = {data};  // 发送数据缓冲区
-    uint8_t rxData[1];          // 接收数据缓冲区
+    uint8_t txData[] = {data};  
+    uint8_t rxData[1];          
 
     if(HAL_SPI_TransmitReceive(&hspi4, txData, rxData, sizeof(txData), 100) != HAL_OK)
     {
@@ -207,8 +204,6 @@ void SPI_Transmit(uint8_t data) {
 uint8_t SPI_TransmitReceive(uint8_t data) {
     uint8_t txData[] = {data}; 
     uint8_t rxData[1];         
-
-
     if(HAL_SPI_TransmitReceive(&hspi4, txData, rxData, sizeof(txData), 100) != HAL_OK)
     {
         Error_Handler();
@@ -236,10 +231,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
         float voltage = Convert_ADC_To_Voltage(adc_value);  
         current_uA = (2008*voltage +  0.27) /1000 ;
-        // // 输出到串口
-        // char buffer1[80];
-        // sprintf(buffer1, "current_uA:%.6f uA\r\n", current_uA);
-        // printf(buffer1);
+
      }
      else if(GPIO_Pin == GPIO_PIN_9)
      {
@@ -252,9 +244,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
        float voltage = Convert_ADC_To_Voltage(adc_value);  
        float current_temp = voltage * 1189.7 + 0.222;
-
        uint8_t data_type = 0; 
-       
        if (current_temp < 1)
        {
            if(current_uA != 0)

@@ -88,6 +88,8 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/config/syscalls.c
     ../../startup_stm32h750xx.s
     ../../Core/Src/pc_to_stm_command_handler/command_handler.c
+    ../../Core/Src/pc_to_stm_command_handler/handler_spi.c
+    ../../Core/Src/pc_to_stm_command_handler/handler_iic.c
 )
 
 target_link_directories(stm32cubemx INTERFACE

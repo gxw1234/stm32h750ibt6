@@ -5,19 +5,38 @@
 #include <stdlib.h> // 用于abs()函数
 #include "Font_library/fonts.h"
 
-/* ST7789 LCD引脚定义 */
-#define LCD_MOSI_PORT   GPIOG
-#define LCD_MOSI_PIN    GPIO_PIN_14
-#define LCD_CLK_PORT    GPIOG
-#define LCD_CLK_PIN     GPIO_PIN_13
-#define LCD_CS_PORT     GPIOG
-#define LCD_CS_PIN      GPIO_PIN_8
-#define LCD_RST_PORT    GPIOG
-#define LCD_RST_PIN     GPIO_PIN_12
-#define LCD_DC_PORT     GPIOG
-#define LCD_DC_PIN      GPIO_PIN_15
-#define LCD_BLK_PORT    GPIOI
-#define LCD_BLK_PIN     GPIO_PIN_6
+/* 中文字库 - 汉字 (16x16点阵) */
+const uint8_t GB2312_HanZi[5][32] = { 
+    /* 最 (0xD7EE) 16x16 */
+    {0x08,0x00,0x3F,0xF8,0x20,0x08,0xFF,0xFE,0x20,0x08,0x2F,0xE8,0x2A,0xA8,0x2A,0xA8,
+     0x2F,0xE8,0x2A,0xA8,0x2A,0xA8,0x2F,0xE8,0x20,0x08,0x20,0x08,0x3F,0xF8,0x00,0x00},
+    /* 大 (0xB4F3) 16x16 */
+    {0x00,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0xFF,0xFE,
+     0x01,0x00,0x01,0x00,0x01,0x00,0x02,0x80,0x04,0x40,0x18,0x30,0x60,0x0C,0x00,0x00},
+    /* 小 (0xD0A1) 16x16 */
+    {0x00,0x00,0x01,0x00,0x02,0x80,0x04,0x40,0x08,0x20,0x10,0x10,0x3F,0xF8,0x01,0x00,
+     0x01,0x00,0x01,0x00,0xFF,0xFE,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x00,0x00},
+    /* 时 (0xCAB1) 16x16 */
+    {0x10,0x40,0x10,0x40,0x10,0x40,0x3F,0xFC,0x22,0x44,0x22,0x44,0x22,0x44,0x22,0x44,
+     0x3F,0xFC,0x22,0x44,0x22,0x44,0x42,0x42,0x82,0x41,0x02,0x40,0x04,0x20,0x18,0x00},
+    /* 间 (0xBCE4) 16x16 */
+    {0x01,0x00,0x01,0x00,0x01,0x00,0xFF,0xFE,0x01,0x00,0x01,0x00,0x11,0x10,0x11,0x10,
+     0x11,0x10,0x11,0x10,0xFF,0xFE,0x01,0x00,0x01,0x00,0x01,0x00,0x01,0x00,0x00,0x00}
+};
+
+// /* ST7789 LCD引脚定义 */
+// #define LCD_MOSI_PORT   GPIOG
+// #define LCD_MOSI_PIN    GPIO_PIN_14
+// #define LCD_CLK_PORT    GPIOG
+// #define LCD_CLK_PIN     GPIO_PIN_13
+// #define LCD_CS_PORT     GPIOG
+// #define LCD_CS_PIN      GPIO_PIN_8
+// #define LCD_RST_PORT    GPIOG
+// #define LCD_RST_PIN     GPIO_PIN_12
+// #define LCD_DC_PORT     GPIOG
+// #define LCD_DC_PIN      GPIO_PIN_15
+// #define LCD_BLK_PORT    GPIOI
+// #define LCD_BLK_PIN     GPIO_PIN_6
 
 /* ST7789命令定义 */
 #define ST7789_NOP       0x00
@@ -750,6 +769,54 @@ void LCD_Add_Current_Point(float current_mA)
  * @param width 波形图宽度
  * @param height 波形图高度
  */
+/* 显示中文字符 (16x16点阵) */
+void LCD_Show_Chinese(uint16_t x, uint16_t y, uint8_t index, uint16_t color, uint16_t bg_color)
+{
+    uint8_t temp, i, j;
+    uint16_t x0 = x; // 保存初始x坐标
+    
+    // 检查坐标是否超出屏幕范围
+    if(x > LCD_WIDTH-16 || y > LCD_HEIGHT-16)
+        return;
+    
+    // 设置显示窗口
+    LCD_Set_Window(x, y, x+15, y+15);
+    
+    // 发送RAM写入命令
+    LCD_Write_Cmd(ST7789_RAMWR);
+    
+    uint16_t y0 = y;
+    
+    // 绘制16x16点阵
+    for(j=0; j<32; j++)
+    {
+        temp = GB2312_HanZi[index][j];
+        for(i=0; i<8; i++)
+        {
+            if(temp & 0x80) // 有数据的点，显示字符颜色
+                LCD_Draw_Point(x, y, color);
+            else // 没有数据的点，显示背景色
+                LCD_Draw_Point(x, y, bg_color);
+            
+            temp <<= 1;
+            x++;
+        }
+        
+        // 每扫描8个点后，调整坐标
+        if(j % 2 == 1) // 每两行完成一个16像素宽的点阵行
+        {
+            x = x0;     // 恢复到最左侧
+            y++;         // 下一行
+        }
+        else
+        {
+            x = x0 + 8; // 移动到右半部分
+        }
+    }
+    
+    // 不需要恢复坐标，因为函数结束时x、y都是局部变量
+}
+
 void LCD_Draw_Current_Wave(uint16_t x, uint16_t y, uint16_t width, uint16_t height)
 {
     // 如果没有数据点，不绘制
@@ -983,9 +1050,16 @@ void LCD_Task(void *pvParameters)
     uint16_t text_x = (LCD_WIDTH - 12*7)/2;  // 居中显示 "ST7789" 7个字符
     uint16_t text_y = (LCD_HEIGHT - 12)/2 - 50; // 在屏幕中心偏上一点
     
+    // 显示中文字符 "最大", 注意LCD高度为240，调整y坐标到200以内
+    LCD_Show_Chinese(10, 260, 0, COLOR_WHITE, COLOR_BLACK); // 显示"最"
+    LCD_Show_Chinese(28, 260, 1, COLOR_WHITE, COLOR_BLACK); // 显示"大"
+    LCD_Show_Chinese(80, 260, 0, COLOR_WHITE, COLOR_BLACK); // 显示"最"
+    LCD_Show_Chinese(98, 260, 2, COLOR_WHITE, COLOR_BLACK); // 显示"小"
+    LCD_Show_Chinese(150, 260, 3, COLOR_WHITE, COLOR_BLACK); // 显示"时"
+    LCD_Show_Chinese(168, 260, 4, COLOR_WHITE, COLOR_BLACK); // 显示"间"
+    
     // // 显示多种字体大小的标题
     // LCD_Show_String((LCD_WIDTH - 16*2)/2, text_y - 20, "Current ", COLOR_WHITE, COLOR_BLACK, FONT_1608);
-    
     // LCD_Show_String((LCD_WIDTH - 16*2)/2, text_y - 40, "Voltage ", COLOR_WHITE, COLOR_BLACK, FONT_1608);
 
 

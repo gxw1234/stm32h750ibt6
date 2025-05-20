@@ -1,9 +1,10 @@
 #include "command_handler.h"
 #include "main.h"
 #include "../tasks/MP8865_task.h"
-#include "tasks/ads1220_task.h"  // 添加头文件以使用数据发送控制函数
+#include "tasks/ads1220_task.h"  
+#include "pc_to_stm_command_handler/handler_spi.h" 
 
-// 外部变量声明
+
 extern UART_HandleTypeDef huart1;
 
 /**
@@ -16,7 +17,7 @@ extern UART_HandleTypeDef huart1;
  * @return int 添加后的位置
  */
 int Add_Parameter(uint8_t* buffer, int pos, void* data, uint16_t len) {
-    // 添加参数头
+
     PARAM_HEADER header;
     header.param_len = len;
     
@@ -75,7 +76,16 @@ static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
     
     HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
     
-    // TODO: 实际实现SPI初始化
+    // 调用handler_spi中的初始化函数
+    HAL_StatusTypeDef status = Handler_SPI_Init(spi_index, pConfig);
+    
+    if (status == HAL_OK) {
+        sprintf(buffer, "SPI init SUCCESSFUL: %d\r\n", spi_index);
+    } else {
+        sprintf(buffer, "SPI init fail: %d, eer: %d\r\n", spi_index, status);
+    }
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
 }
 
 /**
@@ -107,8 +117,6 @@ static void Process_Power_SetVoltage(uint8_t channel, uint16_t voltage_mv) {
  */
 static void Process_Power_StartCurrentReading(uint8_t device_index) {
     printf("Receive Command:POWER_CMD_START_CURRENT_READING,device_index:%d\r\n", device_index);
-    
-    // 启用电流数据发送
     Enable_Current_Data_Sending();
 }
 
@@ -119,8 +127,6 @@ static void Process_Power_StartCurrentReading(uint8_t device_index) {
  */
 static void Process_Power_StopCurrentReading(uint8_t device_index) {
     printf("Receive Command:POWER_CMD_STOP_CURRENT_READING,device_index:%d\r\n", device_index);
-    
-    // 停止电流数据发送
     Disable_Current_Data_Sending();
 }
 
@@ -170,27 +176,19 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
  * @param data_len 数据长度
  */
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
-    // 打印收到的SPI写命令信息
+
     char header_buffer[64];
     sprintf(header_buffer, "\r\nSPI Write: Index=%d, DataLen=%d\r\nData: ", spi_index, data_len);
     HAL_UART_Transmit(&huart1, (uint8_t*)header_buffer, strlen(header_buffer), 100);
-    
-    // 限制打印的数据长度，避免缓冲区溢出
     uint16_t print_len = data_len > 100 ? 100 : data_len;
-    
-    // 打印数据内容（十六进制格式）
     for(uint16_t i = 0; i < print_len; i++) {
         char byte_buffer[8];
         sprintf(byte_buffer, "%02X ", data[i]);
         HAL_UART_Transmit(&huart1, (uint8_t*)byte_buffer, strlen(byte_buffer), 10);
-        
-        // 每16个字节换行
         if((i + 1) % 16 == 0) {
             HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
         }
     }
-    
-    // 如果还有更多数据没有打印，提示用户
     if(data_len > print_len) {
         char more_buffer[64];
         sprintf(more_buffer, "\r\n... (more %d bytes not shown)\r\n", data_len - print_len);
@@ -198,8 +196,15 @@ static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_le
     } else {
         HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
     }
-    
-    // TODO: 这里将来实现真正的SPI写数据操作
+    HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
+    char status_buffer[64];
+    if (status == HAL_OK) {
+        sprintf(status_buffer, "SPI Write Success\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t*)status_buffer, strlen(status_buffer), 100);
+    } else {
+        sprintf(status_buffer, "SPI Write Failed, error code: %d\r\n", status);
+        HAL_UART_Transmit(&huart1, (uint8_t*)status_buffer, strlen(status_buffer), 100);
+    }
 }
 
 /**
@@ -246,16 +251,11 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                             // 数据部分开始位置：命令头 + 参数区
                             int data_pos = sizeof(GENERIC_CMD_HEADER);
                             
-                            // 如果有参数，需要跳过参数区
                             for (int i = 0; i < header->param_count; i++) {
                                 PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
                                 data_pos += sizeof(PARAM_HEADER) + param_header->param_len;
                             }
-                            
-                            // 提取数据部分
                             uint8_t* write_data = Buf + data_pos;
-                            
-                            // 处理SPI写数据命令
                             Process_SPI_Write(header->device_index, write_data, header->data_len);
                         } else {
                             char* error_msg = "Error: No data for SPI_WRITE command\r\n";
@@ -314,22 +314,18 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                     }
                     
                     case POWER_CMD_START_CURRENT_READING: {
-                        // 开始读取电流命令
                         Process_Power_StartCurrentReading(header->device_index);
                         break;
                     }
                     
                     case POWER_CMD_STOP_CURRENT_READING: {
-                        // 停止读取电流命令
                         Process_Power_StopCurrentReading(header->device_index);
                         break;
                     }
                     
                     case POWER_CMD_READ_CURRENT_DATA: {
-                        // 读取电流数据命令
                         uint8_t response_buffer[128];  // 响应缓冲区
                         int response_len = Process_Power_ReadCurrentData(header->device_index, response_buffer, sizeof(response_buffer));
-                        
                         if (response_len > 0) {
                             char debug_msg[64];
                             sprintf(debug_msg, "[Debug] Response data ready, length: %d bytes\r\n", response_len);
