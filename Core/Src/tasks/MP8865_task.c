@@ -2,9 +2,11 @@
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
+#include "main.h"
 
 
 I2C_HandleTypeDef hi2c4;
+I2C_HandleTypeDef hi2c3_test_; // 用于测试I2C3从机模式
 
 
 #define I2C_DEVICE_ADDR    0x60    
@@ -43,6 +45,7 @@ HAL_StatusTypeDef MP8865_SetVoltage(uint8_t voltage_value)
     data[1] = voltage_value;
     status = HAL_I2C_Master_Transmit(&hi2c4, I2C_DEVICE_ADDR << 1, data, 2, HAL_MAX_DELAY);
     return status;
+
 }
 
 void MP8865_Init(void)
@@ -77,6 +80,60 @@ void MP8865_Init(void)
     }
 
 }
+// 测试I2C3从机模式初始化函数
+HAL_StatusTypeDef Test_I2C3_Slave_Init(void)
+{
+    // 使能 GPIO 时钟
+    __HAL_RCC_GPIOA_CLK_ENABLE();
+    __HAL_RCC_GPIOC_CLK_ENABLE();
+    
+    // 配置GPIO
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    
+    // 配置PA8作为I2C3 SCL
+    GPIO_InitStruct.Pin = GPIO_PIN_8;
+    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
+    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    
+    // 配置PC9作为I2C3 SDA
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    
+    // 使能I2C3时钟
+    __HAL_RCC_I2C3_CLK_ENABLE();
+    
+    // 配置I2C参数
+    hi2c3_test_.Instance = I2C3;
+    hi2c3_test_.Init.Timing = 0x10D0A9FF; // 快速模式 (400 KHz)
+    hi2c3_test_.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    hi2c3_test_.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    hi2c3_test_.Init.OwnAddress1 = 0x6e; // 从机地址设置为0x30
+    hi2c3_test_.Init.OwnAddress2 = 0;
+    hi2c3_test_.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+    hi2c3_test_.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    hi2c3_test_.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    
+    return HAL_I2C_Init(&hi2c3_test_);
+}
+
+// 测试I2C3从机模式发送函数
+HAL_StatusTypeDef Test_I2C3_Slave_Transmit(void)
+{
+    printf("Starting I2C3 slave transmit test...\r\n");
+    
+    uint8_t test_data[4] = {0x11, 0x22, 0x33, 0x44};
+    HAL_StatusTypeDef status;
+    
+    printf("HAL_I2C_Slave_Transmit will be called, timeout = 1000ms\r\n");
+    status = HAL_I2C_Slave_Transmit(&hi2c3_test_, test_data, 4, 1000);
+    printf("HAL_I2C_Slave_Transmit completed, status = %d\r\n", status);
+    
+    return status;
+}
+
 void MP8865_Task(void *pvParameters)
 {
     MP8865_Init();
@@ -91,9 +148,33 @@ void MP8865_Task(void *pvParameters)
     else
     {
         printf("MP8865 Init Success!\r\n");
+        
+        // 在MP8865初始化成功后，测试I2C3从机模式
+        printf("Starting I2C3 slave mode test...\r\n");
+        
+        // 初始化I2C3从机模式
+        status = Test_I2C3_Slave_Init();
+        if (status != HAL_OK)
+        {
+            printf("I2C3 slave initialization failed, status = %d\r\n", status);
+        }
+        else
+        {
+            printf("I2C3 slave initialized successfully, trying to transmit data...\r\n");
+            vTaskDelay(pdMS_TO_TICKS(500));
+            
+
+        }
     }
+    
     while (1)
     {
+
+        // 测试从机发送，这里可能会导致系统崩溃
+        // status = Test_I2C3_Slave_Transmit();
+        // // 如果程序执行到这里，说明没有崩溃
+        // printf("I2C3 slave transmit test completed, status = %d\r\n", status);
+        
         vTaskDelay(pdMS_TO_TICKS(1000)); 
     }
 }

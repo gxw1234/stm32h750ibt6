@@ -90,6 +90,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/pc_to_stm_command_handler/command_handler.c
     ../../Core/Src/pc_to_stm_command_handler/handler_spi.c
     ../../Core/Src/pc_to_stm_command_handler/handler_iic.c
+    ../../Core/Src/pc_to_stm_command_handler/handler_gpio.c
 )
 
 target_link_directories(stm32cubemx INTERFACE

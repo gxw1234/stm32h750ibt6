@@ -96,6 +96,8 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
         hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         hspi5.Init.CRCPolynomial = 7;
         return HAL_SPI_Init(&hspi5);
+
+        
     }
     
     

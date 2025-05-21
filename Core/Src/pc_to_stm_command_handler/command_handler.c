@@ -3,6 +3,8 @@
 #include "../tasks/MP8865_task.h"
 #include "tasks/ads1220_task.h"  
 #include "pc_to_stm_command_handler/handler_spi.h" 
+#include "pc_to_stm_command_handler/handler_iic.h" 
+#include "handler_gpio.h" 
 
 
 extern UART_HandleTypeDef huart1;
@@ -131,6 +133,49 @@ static void Process_Power_StopCurrentReading(uint8_t device_index) {
 }
 
 /**
+ * @brief 处理IIC初始化命令
+ * 
+ * @param iic_index IIC索引
+ * @param pConfig IIC配置结构体指针
+ */
+static void Process_IIC_Init(uint8_t iic_index, PIIC_CONFIG pConfig) {
+    char buffer[128];
+
+    sprintf(buffer, "STM32_IIC Init: Index=%d, ClockSpeed=%lu, OwnAddr=0x%04X, Master=%d, AddrBits=%d, EnablePu=%d\r\n", 
+            iic_index, pConfig->ClockSpeedHz, pConfig->OwnAddr, pConfig->Master, pConfig->AddrBits, pConfig->EnablePu);
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+    
+    // 调用handler_iic中的初始化函数
+    HAL_StatusTypeDef status = Handler_IIC_Init(iic_index, pConfig);
+    
+    if (status == HAL_OK) {
+        sprintf(buffer, "IIC init SUCCESSFUL: %d\r\n", iic_index);
+    } else {
+        sprintf(buffer, "IIC init fail: %d, error: %d\r\n", iic_index, status);
+    }
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+}
+
+/**
+ * @brief 处理IIC从机写数据命令
+ * 
+ * @param iic_index IIC索引
+ * @param pData 数据缓冲区
+ * @param data_len 数据长度
+ * @param timeout 超时时间
+ */
+static void Process_IIC_SlaveWrite(uint8_t iic_index, uint8_t* pData, uint16_t data_len, uint32_t timeout) {
+    char buffer[128];
+
+    sprintf(buffer, "STM32_IIC SlaveWrite: Index=%d, DataLen=%d, Timeout=%lu\r\n", 
+            iic_index, data_len, timeout);
+    HAL_StatusTypeDef status = Handler_IIC_SlaveWriteBytes(iic_index, pData, data_len, timeout);
+    
+}
+
+/**
  * @brief 处理读取电流数据命令
  * 
  * @param channel 电流通道 (POWER_CHANNEL_UA 或 POWER_CHANNEL_MA)
@@ -177,25 +222,26 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
  */
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
 
-    char header_buffer[64];
-    sprintf(header_buffer, "\r\nSPI Write: Index=%d, DataLen=%d\r\nData: ", spi_index, data_len);
-    HAL_UART_Transmit(&huart1, (uint8_t*)header_buffer, strlen(header_buffer), 100);
-    uint16_t print_len = data_len > 100 ? 100 : data_len;
-    for(uint16_t i = 0; i < print_len; i++) {
-        char byte_buffer[8];
-        sprintf(byte_buffer, "%02X ", data[i]);
-        HAL_UART_Transmit(&huart1, (uint8_t*)byte_buffer, strlen(byte_buffer), 10);
-        if((i + 1) % 16 == 0) {
-            HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
-        }
-    }
-    if(data_len > print_len) {
-        char more_buffer[64];
-        sprintf(more_buffer, "\r\n... (more %d bytes not shown)\r\n", data_len - print_len);
-        HAL_UART_Transmit(&huart1, (uint8_t*)more_buffer, strlen(more_buffer), 100);
-    } else {
-        HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
-    }
+    // char header_buffer[64];
+    // sprintf(header_buffer, "\r\nSPI Write: Index=%d, DataLen=%d\r\nData: ", spi_index, data_len);
+    // HAL_UART_Transmit(&huart1, (uint8_t*)header_buffer, strlen(header_buffer), 100);
+    // uint16_t print_len = data_len > 100 ? 100 : data_len;
+    // for(uint16_t i = 0; i < print_len; i++) {
+    //     char byte_buffer[8];
+    //     sprintf(byte_buffer, "%02X ", data[i]);
+    //     HAL_UART_Transmit(&huart1, (uint8_t*)byte_buffer, strlen(byte_buffer), 10);
+    //     if((i + 1) % 16 == 0) {
+    //         HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
+    //     }
+    // }
+    // if(data_len > print_len) {
+    //     char more_buffer[64];
+    //     sprintf(more_buffer, "\r\n... (more %d bytes not shown)\r\n", data_len - print_len);
+    //     HAL_UART_Transmit(&huart1, (uint8_t*)more_buffer, strlen(more_buffer), 100);
+    // } else {
+    //     HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
+    // }
+    
     HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
     char status_buffer[64];
     if (status == HAL_OK) {
@@ -205,6 +251,53 @@ static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_le
         sprintf(status_buffer, "SPI Write Failed, error code: %d\r\n", status);
         HAL_UART_Transmit(&huart1, (uint8_t*)status_buffer, strlen(status_buffer), 100);
     }
+}
+
+/**
+ * @brief 处理接收到的命令
+ * 
+ * @param Buf 接收到的数据缓冲区
+ * @param Len 数据长度
+ * @return int8_t 处理结果，0表示成功
+ */
+/**
+ * @brief 处理GPIO设置输出命令
+ * 
+ * @param gpio_index GPIO索引
+ * @param output_mask 输出引脚掩码
+ */
+static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
+    char buffer[128];
+    
+
+    
+    // 调用handler_gpio中的设置函数
+    HAL_StatusTypeDef status = Handler_GPIO_SetOutput(gpio_index, output_mask);
+    
+
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+}
+
+/**
+ * @brief 处理GPIO写数据命令
+ * 
+ * @param gpio_index GPIO索引
+ * @param write_value 写入的值
+ */
+static void Process_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
+    char buffer[128];
+    
+   
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+    
+    // 调用handler_gpio中的写函数
+    HAL_StatusTypeDef status = Handler_GPIO_Write(gpio_index, write_value);
+    
+
+    
+    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
 }
 
 /**
@@ -280,8 +373,48 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 break;
             }
             case PROTOCOL_IIC: {
-                char* msg = "Received IIC command (not implemented yet)\r\n";
-                HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                switch (header->cmd_id) {
+                    case CMD_INIT: {
+                        IIC_CONFIG iic_config;
+                        int param_pos = sizeof(GENERIC_CMD_HEADER);
+                        param_pos = Get_Parameter(Buf, param_pos, &iic_config, sizeof(IIC_CONFIG));
+                        if (param_pos > 0) {
+                            Process_IIC_Init(header->device_index, &iic_config);
+                        } else {
+                            char* error_msg = "Error: Failed to parse IIC_CONFIG\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    case CMD_WRITE: {
+                        // IIC从机写数据命令
+                        char buffer[64];
+                        sprintf(buffer, "Received IIC WRITE command: Index=%d, DataLen=%d\r\n", 
+                                header->device_index, header->data_len);
+                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                        
+                        // 检查是否有数据
+                        if (header->data_len > 0) {
+                            // 获取数据部分起始位置
+                            int data_pos = sizeof(GENERIC_CMD_HEADER);
+                            // 提取超时参数(如果有)
+                            uint32_t timeout = 3000;  // 默认超时时间为3000ms
+                            
+                            // 读取数据并处理
+                            Process_IIC_SlaveWrite(header->device_index, Buf + data_pos, header->data_len, timeout);
+                        } else {
+                            char* error_msg = "Error: No data for IIC WRITE command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    default: {
+                        char buffer[64];
+                        sprintf(buffer, "Unknown IIC command ID: 0x%02X\r\n", header->cmd_id);
+                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                        break;
+                    }
+                }
                 break;
             }
             
@@ -294,8 +427,62 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
             
             case PROTOCOL_GPIO: {
                 // 处理GPIO协议命令
-                char* msg = "Received GPIO command (not implemented yet)\r\n";
-                HAL_UART_Transmit(&huart1, (uint8_t*)msg, strlen(msg), 100);
+                switch (header->cmd_id) {
+                    case CMD_SET_DIR: {
+                        // GPIO设置方向
+                        if (header->data_len > 0) {
+                            uint8_t output_mask = Buf[sizeof(GENERIC_CMD_HEADER)];
+                            Process_GPIO_SetOutput(header->device_index, output_mask);
+                        } else {
+                            char* error_msg = "Error: No mask for GPIO set direction command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    case CMD_INIT: {
+                        // GPIO初始化/设置方向
+                        int param_pos = sizeof(GENERIC_CMD_HEADER);
+                        if (header->param_count > 0) {
+                            // 获取GPIO方向配置参数
+                            typedef struct {
+                                uint8_t dir;     // 方向：输入/输出
+                                uint8_t mask;    // 引脚掩码
+                            } GPIO_DIR_CONFIG;
+                            
+                            GPIO_DIR_CONFIG dir_config;
+                            param_pos = Get_Parameter(Buf, param_pos, &dir_config, sizeof(GPIO_DIR_CONFIG));
+                            if (param_pos < 0) {
+                                char* error_msg = "Error: Invalid parameter for GPIO init command\r\n";
+                                HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                                break;
+                            }
+                            
+                            // 调用GPIO方向设置函数
+                            Process_GPIO_SetOutput(header->device_index, dir_config.mask);
+                        } else {
+                            char* error_msg = "Error: No parameters for GPIO init command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    case CMD_WRITE: {
+                        // GPIO写数据
+                        if (header->data_len > 0) {
+                            uint8_t gpio_value = Buf[sizeof(GENERIC_CMD_HEADER)];
+                            Process_GPIO_Write(header->device_index, gpio_value);
+                        } else {
+                            char* error_msg = "Error: No data for GPIO write command\r\n";
+                            HAL_UART_Transmit(&huart1, (uint8_t*)error_msg, strlen(error_msg), 100);
+                        }
+                        break;
+                    }
+                    default: {
+                        char buffer[64];
+                        sprintf(buffer, "Unknown GPIO command ID: 0x%02X\r\n", header->cmd_id);
+                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+                        break;
+                    }
+                }
                 break;
             }
             

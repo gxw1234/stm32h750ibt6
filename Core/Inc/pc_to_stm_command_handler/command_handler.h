@@ -18,6 +18,7 @@
 #define CMD_WRITE           0x02    // 写数据命令
 #define CMD_READ            0x03    // 读数据命令
 #define CMD_TRANSFER        0x04    // 读写数据命令
+#define CMD_SET_DIR         0x04    // 设置GPIO方向
 
 // 电源命令ID定义
 #define POWER_CMD_SET_VOLTAGE       0x01  // 设置电压命令

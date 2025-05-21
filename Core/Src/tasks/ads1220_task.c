@@ -252,7 +252,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
                 current_send_temp = current_uA;
                 current_mA += current_uA;
                 data_type = 1; // 微安数据
-                printf("9");
+           
            }
        } else
        {
