@@ -31,13 +31,18 @@
 #define POWER_CHANNEL_UA        0x02  // 微安电流通道
 #define POWER_CHANNEL_MA        0x03  // 毫安电流通道
 
+// 为了支持大数据包和多包传输的定义
+#define CMD_END_MARKER 0xA5A5A5A5  // 命令结束标记符
+
 // 通用命令包头结构
 typedef struct _GENERIC_CMD_HEADER {
   uint8_t protocol_type;  // 协议类型：SPI/IIC/UART等
   uint8_t cmd_id;         // 命令ID：初始化/读/写等
   uint8_t device_index;   // 设备索引
   uint8_t param_count;    // 参数数量
-  uint16_t data_len;      // 数据部分长度
+  uint32_t data_len;      // 数据部分长度
+  uint16_t total_packets; // 整个数据包的总大小，包括头部和数据
+  uint32_t end_marker;    // 固定结束标记，值为0xA5A5A5A5
 } GENERIC_CMD_HEADER, *PGENERIC_CMD_HEADER;
 
 // 简化的参数头结构

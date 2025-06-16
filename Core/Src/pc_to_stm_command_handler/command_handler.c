@@ -224,26 +224,7 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
  */
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
 
-    // char header_buffer[64];
-    // sprintf(header_buffer, "\r\nSPI Write: Index=%d, DataLen=%d\r\nData: ", spi_index, data_len);
-    // HAL_UART_Transmit(&huart1, (uint8_t*)header_buffer, strlen(header_buffer), 100);
-    // uint16_t print_len = data_len > 100 ? 100 : data_len;
-    // for(uint16_t i = 0; i < print_len; i++) {
-    //     char byte_buffer[8];
-    //     sprintf(byte_buffer, "%02X ", data[i]);
-    //     HAL_UART_Transmit(&huart1, (uint8_t*)byte_buffer, strlen(byte_buffer), 10);
-    //     if((i + 1) % 16 == 0) {
-    //         HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
-    //     }
-    // }
-    // if(data_len > print_len) {
-    //     char more_buffer[64];
-    //     sprintf(more_buffer, "\r\n... (more %d bytes not shown)\r\n", data_len - print_len);
-    //     HAL_UART_Transmit(&huart1, (uint8_t*)more_buffer, strlen(more_buffer), 100);
-    // } else {
-    //     HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 2, 10);
-    // }
-    
+
     HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
     char status_buffer[64];
     if (status == HAL_OK) {
@@ -528,7 +509,6 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 }
                 break;
             }
-            
             default: {
                 // 未知协议类型
                 char buffer[64];

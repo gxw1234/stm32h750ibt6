@@ -20,8 +20,13 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "usbd_cdc_if.h"
-
 #include "command_handler.h"
+#include "tasks/usb_command_pc_to_st_task.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "queue.h"
+#include "semphr.h"
+#include <string.h>
 
 /* USER CODE BEGIN INCLUDE */
 //-----------------ADD GUOXUAN-----------------------
@@ -114,6 +119,7 @@ uint8_t UserTxBufferHS[APP_TX_DATA_SIZE];
   */
 
 extern USBD_HandleTypeDef hUsbDeviceHS;
+extern QueueHandle_t usbMessageQueueHandle;
 
 /* USER CODE BEGIN EXPORTED_VARIABLES */
 
@@ -269,19 +275,24 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   */
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
-  /* USER CODE BEGIN 11 */
-	//-------------ADD GUOXUAN--------------------
+    if (usbMessageQueueHandle != NULL && *Len <= 64) {
+       
+        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+        USB_Data_TypeDef usbData;
+        usbData.Buf = Buf;
+        usbData.Len = Len;
 
-  Process_Command(Buf, Len);
+        if (xQueueSendFromISR(usbMessageQueueHandle, &usbData, &xHigherPriorityTaskWoken) != pdPASS) {
+            printf("Queue full\r\n");
+        }
 
-  
-
-//--------------------------------------------
-
-  USBD_CDC_SetRxBuffer(&hUsbDeviceHS, &Buf[0]);
-  USBD_CDC_ReceivePacket(&hUsbDeviceHS);
-  return (USBD_OK);
-  /* USER CODE END 11 */
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    }
+    
+    // 继续接收
+    USBD_CDC_SetRxBuffer(&hUsbDeviceHS, Buf);
+    USBD_CDC_ReceivePacket(&hUsbDeviceHS);
+    return (USBD_OK);
 }
 
 /**

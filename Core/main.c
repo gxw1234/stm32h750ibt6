@@ -35,6 +35,9 @@
 #include "tasks/test_usb_send.h"
 #include "init/uart_init.h"
 
+/* USB命令处理任务声明 */
+extern void usb_command_pc_to_st_task(void *pvParameters);
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,6 +64,7 @@ osThreadId printTaskHandle;  /* 添加新的线程句柄 */
 TaskHandle_t lcdTaskHandle;  /* LCD线程句柄 */
 TaskHandle_t ads1220TaskHandle;  /* ADS1220线程句柄 */
 TaskHandle_t mp8865TaskHandle;  /* MP8865线程句柄 */
+TaskHandle_t UsbCmdTaskHandle; /* USB命令处理线程句柄 */
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -123,7 +127,9 @@ int main(void)
   /* 初始化UART和printf重定向 */
   UART_Init();
   
-  MX_USB_DEVICE_Init();
+  MX_USB_DEVICE_Init();  
+  
+  /* 创建USB命令处理任务 */
   /* USER CODE END 2 */
 
   /* USER CODE BEGIN RTOS_MUTEX */
@@ -163,7 +169,11 @@ int main(void)
   xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
   /*创建USB发送测试线程 */
-  xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
+  // xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
+
+  /*创建USB命令处理线程 */
+  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbCmdTaskHandle);
+
   /* Start scheduler */
   osKernelStart();
 
