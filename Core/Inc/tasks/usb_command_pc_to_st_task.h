@@ -9,9 +9,12 @@
 // 定义缓冲区大小
 #define USB_RX_BUFFER_SIZE 64
 
+// 定义大数据缓冲区大小 (96*240 + 一些额外空间用于头部和结束符)
+#define USB_LARGE_BUFFER_SIZE (96*240 + 256)
+
 // 定义USB数据结构体
 typedef struct {
-    uint8_t* Buf;      // 数据缓冲区指针
+    uint8_t Buf[512];      // 数据缓冲区指针
     uint32_t* Len;     // 数据长度指针
 } USB_Data_TypeDef;
 

@@ -275,19 +275,25 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   */
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
-    if (usbMessageQueueHandle != NULL && *Len <= 64) {
-       
-        BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-        USB_Data_TypeDef usbData;
-        usbData.Buf = Buf;
-        usbData.Len = Len;
+  
 
-        if (xQueueSendFromISR(usbMessageQueueHandle, &usbData, &xHigherPriorityTaskWoken) != pdPASS) {
-            printf("Queue full\r\n");
-        }
+    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
+    USB_Data_TypeDef usbData;
+    
+    // 初始化缓冲区
+    memset(usbData.Buf, 0, sizeof(usbData.Buf));
+    
+    memcpy(usbData.Buf, Buf, (*Len > sizeof(usbData.Buf)) ? sizeof(usbData.Buf) : *Len);
+    usbData.Len = Len;
 
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    if (xQueueSendFromISR(usbMessageQueueHandle, &usbData, &xHigherPriorityTaskWoken) != pdPASS) {
+        printf("Queue full\r\n");
     }
+
+    if (xHigherPriorityTaskWoken == pdTRUE) {
+        portYIELD_FROM_ISR();
+    }
+
     
     // 继续接收
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, Buf);
