@@ -70,6 +70,8 @@ int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
  */
 static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
    
+
+    printf("----------------SPI_CMD_INIT----------------\r\n");
     char buffer[128];
 
     sprintf(buffer, "STM32_SPI Init: Index=%d, Mode=%d, Master=%d, CPOL=%d, CPHA=%d, LSB=%d, SelPol=%d, Clock=%lu\r\n", 
@@ -268,15 +270,12 @@ static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_le
  */
 static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
     char buffer[128];
-    
 
-    
     // 调用handler_gpio中的设置函数
     HAL_StatusTypeDef status = Handler_GPIO_SetOutput(gpio_index, output_mask);
     
-
-    
     HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+    
 }
 
 /**
@@ -343,7 +342,6 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         if (header->data_len > 0) {
                             // 数据部分开始位置：命令头 + 参数区
                             int data_pos = sizeof(GENERIC_CMD_HEADER);
-                            
                             for (int i = 0; i < header->param_count; i++) {
                                 PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
                                 data_pos += sizeof(PARAM_HEADER) + param_header->param_len;

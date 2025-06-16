@@ -16,40 +16,40 @@ I2C_HandleTypeDef hi2c3_test;
  */
 HAL_StatusTypeDef Handler_IIC_Init(uint8_t iic_index, PIIC_CONFIG pConfig)
 {
-    // 使能 GPIO 时钟
-    __HAL_RCC_GPIOA_CLK_ENABLE();
-    __HAL_RCC_GPIOC_CLK_ENABLE();
+    // // 使能 GPIO 时钟
+    // __HAL_RCC_GPIOA_CLK_ENABLE();
+    // __HAL_RCC_GPIOC_CLK_ENABLE();
     
-    // 配置GPIO
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
+    // // 配置GPIO
+    // GPIO_InitTypeDef GPIO_InitStruct = {0};
     
-    // 配置PA8作为I2C3 SCL
-    GPIO_InitStruct.Pin = GPIO_PIN_8;
-    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
-    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+    // // 配置PA8作为I2C3 SCL
+    // GPIO_InitStruct.Pin = GPIO_PIN_8;
+    // GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;
+    // GPIO_InitStruct.Pull = GPIO_NOPULL;
+    // GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    // GPIO_InitStruct.Alternate = GPIO_AF4_I2C3;
+    // HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
     
-    // 配置PC9作为I2C3 SDA
-    GPIO_InitStruct.Pin = GPIO_PIN_9;
-    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+    // // 配置PC9作为I2C3 SDA
+    // GPIO_InitStruct.Pin = GPIO_PIN_9;
+    // HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
     
-    // 使能I2C3时钟
-    __HAL_RCC_I2C3_CLK_ENABLE();
+    // // 使能I2C3时钟
+    // __HAL_RCC_I2C3_CLK_ENABLE();
     
-    // 配置I2C参数
-    hi2c3_test.Instance = I2C3;
-    hi2c3_test.Init.Timing = 0x10D0A9FF; // 快速模式 (400 KHz)
-    hi2c3_test.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-    hi2c3_test.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-    hi2c3_test.Init.OwnAddress1 = 0x30; // 从机地址设置为0x30
-    hi2c3_test.Init.OwnAddress2 = 0;
-    hi2c3_test.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
-    hi2c3_test.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-    hi2c3_test.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+    // // 配置I2C参数
+    // hi2c3_test.Instance = I2C3;
+    // hi2c3_test.Init.Timing = 0x10D0A9FF; // 快速模式 (400 KHz)
+    // hi2c3_test.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+    // hi2c3_test.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+    // hi2c3_test.Init.OwnAddress1 = 0x30; // 从机地址设置为0x30
+    // hi2c3_test.Init.OwnAddress2 = 0;
+    // hi2c3_test.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+    // hi2c3_test.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+    // hi2c3_test.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
     
-    return HAL_I2C_Init(&hi2c3_test);
+    // return HAL_I2C_Init(&hi2c3_test);
     
 }
 

@@ -91,7 +91,8 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
         else if (pConfig->ClockSpeedHz >= spi_clock / 128)
             prescaler = SPI_BAUDRATEPRESCALER_128;
         hspi5.Init.BaudRatePrescaler = prescaler;
-        hspi5.Init.FirstBit = pConfig->LSBFirst ? SPI_FIRSTBIT_LSB : SPI_FIRSTBIT_MSB;
+        // hspi5.Init.FirstBit = pConfig->LSBFirst ? SPI_FIRSTBIT_LSB : SPI_FIRSTBIT_MSB;
+        hspi5.Init.FirstBit = SPI_FIRSTBIT_LSB ;
         hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
         hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         hspi5.Init.CRCPolynomial = 7;

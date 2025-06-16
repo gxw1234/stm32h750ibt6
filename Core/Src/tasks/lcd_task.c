@@ -109,11 +109,11 @@ void LCD_SPI_Init(void)
     if (HAL_SPI_Init(&hspi6) != HAL_OK)
     {
         // 初始化错误处理
-        printf("LCD SPI初始化失败\r\n");
+        printf("LCD SPI init failed\r\n");
         return;
     }
     
-    printf("LCD SPI初始化成功\r\n");
+
     
     // 使能SPI
     __HAL_SPI_ENABLE(&hspi6);

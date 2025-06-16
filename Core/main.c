@@ -32,7 +32,9 @@
 #include "tasks/lcd_task.h"
 #include "tasks/ads1220_task.h"
 #include "tasks/MP8865_task.h"
+#include "tasks/test_usb_send.h"
 #include "init/uart_init.h"
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -83,6 +85,11 @@ void StartPrintTask(void * argument);  /* 新的打印线程函数声明 */
   * @brief  The application entry point.
   * @retval int
   */
+
+
+
+
+
 int main(void)
 {
 
@@ -154,6 +161,9 @@ int main(void)
   
   /*创建MP8865线程 */
   xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
+  
+  /*创建USB发送测试线程 */
+  xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
   /* Start scheduler */
   osKernelStart();
 
@@ -161,11 +171,11 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
-    /* USER CODE END WHILE */
 
-    /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }

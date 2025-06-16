@@ -36,6 +36,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/tasks/lcd_task.c
     ../../Core/Src/tasks/ads1220_task.c
     ../../Core/Src/tasks/MP8865_task.c
+    ../../Core/Src/tasks/test_usb_send.c
     ../../Core/Src/init/uart_init.c
     ../../Core/Src/init/gpio_init.c
     ../../Core/Src/Font_library/fonts.c
