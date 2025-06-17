@@ -49,9 +49,15 @@ int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
     memcpy(&header, buffer + pos, sizeof(PARAM_HEADER));
     pos += sizeof(PARAM_HEADER);
     
+    char debug_buffer[64];
+    sprintf(debug_buffer, "Get_Parameter: param_len=%d, max_len=%d\r\n", header.param_len, max_len);
+    HAL_UART_Transmit(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer), 100);
+    
     // 检查缓冲区大小
     if (header.param_len > max_len) {
         // 如果参数长度超过缓冲区大小，返回错误
+        sprintf(debug_buffer, "Error: param_len > max_len\r\n");
+        HAL_UART_Transmit(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer), 100);
         return -1;
     }
     
@@ -59,6 +65,8 @@ int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
     memcpy(data, buffer + pos, header.param_len);
     pos += header.param_len;
     
+    sprintf(debug_buffer, "Get_Parameter: success, new pos=%d\r\n", pos);
+    HAL_UART_Transmit(&huart1, (uint8_t*)debug_buffer, strlen(debug_buffer), 100);
     return pos;
 }
 
@@ -69,27 +77,22 @@ int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
  * @param pConfig SPI配置结构体指针
  */
 static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
-   
+    printf("STM32_SPI Init: Index=%d, Mode=%d, Master=%d, CPOL=%d, CPHA=%d, LSB=%d, SelPol=%d, Clock=%lu\n", 
+           spi_index, pConfig->Mode, pConfig->Master, pConfig->CPOL, pConfig->CPHA, 
+           pConfig->LSBFirst, pConfig->SelPolarity, pConfig->ClockSpeedHz);
 
-    printf("----------------SPI_CMD_INIT----------------\r\n");
-    char buffer[128];
-
-    sprintf(buffer, "STM32_SPI Init: Index=%d, Mode=%d, Master=%d, CPOL=%d, CPHA=%d, LSB=%d, SelPol=%d, Clock=%lu\r\n", 
-            spi_index, pConfig->Mode, pConfig->Master, pConfig->CPOL, pConfig->CPHA, 
-            pConfig->LSBFirst, pConfig->SelPolarity, pConfig->ClockSpeedHz);
-    
-    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
-    
     // 调用handler_spi中的初始化函数
     HAL_StatusTypeDef status = Handler_SPI_Init(spi_index, pConfig);
     
     if (status == HAL_OK) {
-        sprintf(buffer, "SPI init SUCCESSFUL: %d\r\n", spi_index);
+
+        printf("SPI init SUCCESSFUL: %d\r\n", spi_index);
+
     } else {
-        sprintf(buffer, "SPI init fail: %d, eer: %d\r\n", spi_index, status);
+        printf("SPI init fail: %d, eer: %d\r\n", spi_index, status);
     }
     
-    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+
 }
 
 /**
@@ -298,10 +301,9 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 switch (header->cmd_id) {
                     case CMD_INIT: {
                        
-                        char buffer[256];
-                        sprintf(buffer, "SPI Init Command: Device=%d, ParamCount=%d\r\n", 
-                                header->device_index, header->param_count);
-                        HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+
+                        printf("SPI Init Command: Device=%d, ParamCount=%d\n",header->device_index, header->param_count);
+                        
                         if (header->param_count > 0) {
                             int pos = sizeof(GENERIC_CMD_HEADER);
                             SPI_CONFIG spi_config;
@@ -319,9 +321,9 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         break;
                     }
                     case CMD_WRITE: {
-                        // SPI写命令
+                       
                         if (header->data_len > 0) {
-                            // 数据部分开始位置：命令头 + 参数区
+                            
                             int data_pos = sizeof(GENERIC_CMD_HEADER);
                             for (int i = 0; i < header->param_count; i++) {
                                 PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);

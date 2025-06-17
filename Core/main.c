@@ -172,7 +172,7 @@ int main(void)
   // xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
 
   /*创建USB命令处理线程 */
-  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbCmdTaskHandle);
+  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &UsbCmdTaskHandle);  // 提高优先级到5，提升USB数据处理性能
 
   /* Start scheduler */
   osKernelStart();

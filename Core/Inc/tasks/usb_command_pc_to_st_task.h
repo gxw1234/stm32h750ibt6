@@ -14,8 +14,8 @@
 
 // 定义USB数据结构体
 typedef struct {
-    uint8_t Buf[512];      // 数据缓冲区指针
-    uint32_t* Len;     // 数据长度指针
+    uint8_t Buf[512];      // 数据缓冲区
+    uint32_t Length;     // 数据长度值
 } USB_Data_TypeDef;
 
 // 使用静态缓冲区

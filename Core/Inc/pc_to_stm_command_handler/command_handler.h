@@ -40,9 +40,8 @@ typedef struct _GENERIC_CMD_HEADER {
   uint8_t cmd_id;         // 命令ID：初始化/读/写等
   uint8_t device_index;   // 设备索引
   uint8_t param_count;    // 参数数量
-  uint32_t data_len;      // 数据部分长度
+  uint16_t data_len;      // 数据部分长度
   uint16_t total_packets; // 整个数据包的总大小，包括头部和数据
-  uint32_t end_marker;    // 固定结束标记，值为0xA5A5A5A5
 } GENERIC_CMD_HEADER, *PGENERIC_CMD_HEADER;
 
 // 简化的参数头结构
@@ -60,13 +59,13 @@ typedef struct _PARAM_HEADER {
 
 // SPI配置结构体（保留向后兼容性）
 typedef struct _SPI_CONFIG {
-  uint8_t   Mode;            // SPI控制方式:0-硬件控制（全双工模式）,1-硬件控制（半双工模式），2-软件控制（半双工模式）,3-单总线模式，数据线输入输出都为MOSI,4-软件控制（全双工模式）  
-  uint8_t   Master;          // 主从选择控制:0-从机，1-主机  
-  uint8_t   CPOL;            // 时钟极性控制:0-SCK空闲时为低电平，1-SCK空闲时为高电平  
-  uint8_t   CPHA;            // 时钟相位控制:0-第一个SCK时钟采样，1-第二个SCK时钟采样  
-  uint8_t   LSBFirst;        // 数据移位方式:0-MSB在前，1-LSB在前  
-  uint8_t   SelPolarity;     // 片选信号极性:0-低电平选中，1-高电平选中  
-  uint32_t  ClockSpeedHz;    // SPI时钟频率:单位为HZ，硬件模式下最处50000000，最小390625，频率按2的倍数改变  
+  char   Mode;            // SPI控制方式:0-硬件控制（全双工模式）,1-硬件控制（半双工模式），2-软件控制（半双工模式）,3-单总线模式，数据线输入输出都为MOSI,4-软件控制（全双工模式）  
+  char   Master;          // 主从选择控制:0-从机，1-主机  
+  char   CPOL;            // 时钟极性控制:0-SCK空闲时为低电平，1-SCK空闲时为高电平  
+  char   CPHA;            // 时钟相位控制:0-第一个SCK时钟采样，1-第二个SCK时钟采样  
+  char   LSBFirst;        // 数据移位方式:0-MSB在前，1-LSB在前  
+  char   SelPolarity;     // 片选信号极性:0-低电平选中，1-高电平选中  
+  unsigned int  ClockSpeedHz;    // SPI时钟频率:单位为HZ，硬件模式下最处50000000，最小390625，频率按2的倍数改变  
 } SPI_CONFIG, *PSPI_CONFIG;
 
 // 电压配置结构体

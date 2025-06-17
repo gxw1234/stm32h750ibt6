@@ -275,23 +275,28 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   */
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
-  
+
+//   for (uint32_t i = 0; i < *Len; i++) {
+//     printf("Buf[%u]: 0x%02X\n", i, Buf[i]);  // 以十六进制格式打印索引和对应的字节值
+// }
+
+
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     USB_Data_TypeDef usbData;
     
-    // 初始化缓冲区
     memset(usbData.Buf, 0, sizeof(usbData.Buf));
     
-    memcpy(usbData.Buf, Buf, (*Len > sizeof(usbData.Buf)) ? sizeof(usbData.Buf) : *Len);
-    usbData.Len = Len;
+    uint32_t actualLen = (*Len > sizeof(usbData.Buf)) ? sizeof(usbData.Buf) : *Len;
+    memcpy(usbData.Buf, Buf, actualLen);
+    usbData.Length = actualLen;
 
     if (xQueueSendFromISR(usbMessageQueueHandle, &usbData, &xHigherPriorityTaskWoken) != pdPASS) {
         printf("Queue full\r\n");
     }
 
     if (xHigherPriorityTaskWoken == pdTRUE) {
-        portYIELD_FROM_ISR();
+        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
     
