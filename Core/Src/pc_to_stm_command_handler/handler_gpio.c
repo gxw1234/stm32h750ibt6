@@ -52,8 +52,8 @@ HAL_StatusTypeDef Handler_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask
     if (gpio_index == 0) {
         GPIO_InitStruct.Pin = GPIO_PIN_7;         // PH7引脚
         GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-        GPIO_InitStruct.Pull = GPIO_NOPULL;
-        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);  // 在GPIOH端口上初始化
         
         // 默认设置为高电平
@@ -61,8 +61,17 @@ HAL_StatusTypeDef Handler_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask
         
         // 保存输出状态
         gpio_output_state[gpio_index] = output_mask;
-        
+
+
+        GPIO_InitStruct.Pin = GPIO_PIN_8;         // PH7引脚
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull = GPIO_NOPULL;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+        HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);  // 在GPIOH端口上初始化
+
+
         printf("PH7 configured as output and set HIGH, mask: 0x%02X\r\n", output_mask);
+        
         return HAL_OK;
     }
     else {

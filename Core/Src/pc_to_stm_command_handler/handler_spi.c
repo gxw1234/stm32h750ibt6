@@ -1,6 +1,8 @@
 #include "handler_spi.h"
 #include "main.h"
 
+
+
 // SPI句柄定义
 static SPI_HandleTypeDef hspi5;
 
@@ -35,7 +37,7 @@ static HAL_StatusTypeDef SPI_GPIO_Init(uint8_t spi_index)
         PH7     ------> SPI5_MISO
         */
         // 配置PH6和PH7
-        GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
+        GPIO_InitStruct.Pin = GPIO_PIN_6;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
@@ -74,6 +76,8 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
         hspi5.Init.CLKPolarity = pConfig->CPOL ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW;
         hspi5.Init.CLKPhase = pConfig->CPHA ? SPI_PHASE_2EDGE : SPI_PHASE_1EDGE;
         hspi5.Init.NSS = SPI_NSS_SOFT; // 软件NSS管理
+
+
         uint32_t spi_clock = HAL_RCC_GetPCLK2Freq(); // 获取PCLK2频率
         uint32_t prescaler = SPI_BAUDRATEPRESCALER_256; // 默认最低速度
         if (pConfig->ClockSpeedHz >= spi_clock / 2)
@@ -90,6 +94,11 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
             prescaler = SPI_BAUDRATEPRESCALER_64;
         else if (pConfig->ClockSpeedHz >= spi_clock / 128)
             prescaler = SPI_BAUDRATEPRESCALER_128;
+
+
+
+        prescaler = SPI_BAUDRATEPRESCALER_4;
+
         hspi5.Init.BaudRatePrescaler = prescaler;
         // hspi5.Init.FirstBit = pConfig->LSBFirst ? SPI_FIRSTBIT_LSB : SPI_FIRSTBIT_MSB;
         hspi5.Init.FirstBit = SPI_FIRSTBIT_LSB ;
@@ -119,7 +128,9 @@ HAL_StatusTypeDef Handler_SPI_Transmit(uint8_t spi_index, uint8_t *pTxData, uint
 {
     if (spi_index == SPI_INDEX_0) { // SPI5
         if (pRxData != NULL) {
-            return HAL_SPI_TransmitReceive(&hspi5, pTxData, pRxData, DataSize, Timeout);
+
+            HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(&hspi5, pTxData, pRxData, DataSize, Timeout);
+            return status;
         } else {
             return HAL_SPI_Transmit(&hspi5, pTxData, DataSize, Timeout);
         }

@@ -169,8 +169,9 @@ int main(void)
   xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
   /*创建USB发送测试线程 */
-  // xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
+  xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
 
+  printf("----------%s %d-+++---\r\n", __FILE__, __LINE__);
   /*创建USB命令处理线程 */
   xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &UsbCmdTaskHandle);  // 提高优先级到5，提升USB数据处理性能
 
@@ -185,7 +186,7 @@ int main(void)
   while (1)
   {
 
-
+      vTaskDelay(pdMS_TO_TICKS(1000));
   }
   /* USER CODE END 3 */
 }
@@ -340,6 +341,7 @@ void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
+  printf("ERROR: Error_Handler\r\n");
   __disable_irq();
   while (1)
   {

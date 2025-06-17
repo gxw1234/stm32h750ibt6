@@ -81,7 +81,6 @@ static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
            spi_index, pConfig->Mode, pConfig->Master, pConfig->CPOL, pConfig->CPHA, 
            pConfig->LSBFirst, pConfig->SelPolarity, pConfig->ClockSpeedHz);
 
-    // 调用handler_spi中的初始化函数
     HAL_StatusTypeDef status = Handler_SPI_Init(spi_index, pConfig);
     
     if (status == HAL_OK) {
@@ -218,6 +217,9 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
     return response_len;
 }
 
+
+#define SPI_CS4_LOW()       HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_RESET)
+#define SPI_CS4_HIGH()      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET)
 /**
  * @brief 处理SPI写数据命令
  * 
@@ -228,15 +230,16 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
 
 
+    SPI_CS4_LOW();
     HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
-    char status_buffer[64];
-    if (status == HAL_OK) {
-        sprintf(status_buffer, "SPI Write Success\r\n");
-        HAL_UART_Transmit(&huart1, (uint8_t*)status_buffer, strlen(status_buffer), 100);
-    } else {
-        sprintf(status_buffer, "SPI Write Failed, error code: %d\r\n", status);
-        HAL_UART_Transmit(&huart1, (uint8_t*)status_buffer, strlen(status_buffer), 100);
-    }
+    SPI_CS4_HIGH();
+    // if (status == HAL_OK) {
+
+    //     printf("SPI Write Success\r\n");
+    // } else {
+
+    //     printf("SPI Write Failed, error code: %d\r\n", status);
+    // }
 }
 
 /**
@@ -253,12 +256,11 @@ static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_le
  * @param output_mask 输出引脚掩码
  */
 static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
-    char buffer[128];
 
-    // 调用handler_gpio中的设置函数
+
+
     HAL_StatusTypeDef status = Handler_GPIO_SetOutput(gpio_index, output_mask);
     
-    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
     
 }
 
@@ -269,18 +271,10 @@ static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
  * @param write_value 写入的值
  */
 static void Process_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
-    char buffer[128];
-    
-   
-    
-    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
-    
+
     // 调用handler_gpio中的写函数
     HAL_StatusTypeDef status = Handler_GPIO_Write(gpio_index, write_value);
-    
-
-    
-    HAL_UART_Transmit(&huart1, (uint8_t*)buffer, strlen(buffer), 100);
+  
 }
 
 /**

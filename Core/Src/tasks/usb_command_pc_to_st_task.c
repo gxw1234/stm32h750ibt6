@@ -22,14 +22,14 @@ QueueHandle_t usbMessageQueueHandle = NULL;
 
 void usb_command_pc_to_st_task(void *argument)
 {
-    printf("USB task starting...\r\n");
+
     
     // 初始化累积缓冲区状态
     accumulated_length = 0;
     packet_complete = 0;
     memset(big_buffer, 0, BIG_BUFFER_SIZE);
     
-    usbMessageQueueHandle = xQueueCreate(30, sizeof(USB_Data_TypeDef));
+    usbMessageQueueHandle = xQueueCreate(60, sizeof(USB_Data_TypeDef));
     if (usbMessageQueueHandle == NULL) {
         printf("Queue create failed!\r\n");
         vTaskDelete(NULL);
@@ -49,10 +49,8 @@ void usb_command_pc_to_st_task(void *argument)
                     uint32_t end_marker;
                     memcpy(&end_marker, big_buffer + accumulated_length - sizeof(uint32_t), sizeof(uint32_t));
                     if (end_marker == CMD_END_MARKER) {
-                        printf("Found end marker! Total data: %lu bytes\r\n", accumulated_length);
-
+                        // printf("Total data: %lu bytes\r\n", accumulated_length);
                         Process_Command(big_buffer, &accumulated_length);
-
                         accumulated_length = 0;
                         memset(big_buffer, 0, BIG_BUFFER_SIZE);
                     }

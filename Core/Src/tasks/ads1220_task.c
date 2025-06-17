@@ -13,6 +13,16 @@
 #define SPI_CS2_HIGH()      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET)
 
 
+
+
+
+// #define SPI_CS3_LOW()       HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_RESET)
+// #define SPI_CS3_HIGH()      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_SET)
+// #define SPI_CS4_LOW()       HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_RESET)
+// #define SPI_CS4_HIGH()      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET)
+
+
+
 SPI_HandleTypeDef hspi4;
 
 
@@ -123,6 +133,11 @@ void ADS1220_Task(void *argument)
     LCD_Show_String(5, CURRENT_MA_Y_POS, "Current:", COLOR_WHITE, COLOR_BLACK, FONT_1608);
     LCD_Draw_Current_Wave(WAVE_X, WAVE_Y, WAVE_WIDTH, WAVE_HEIGHT);
     while(1) {
+
+
+
+        // SPI_CS3_LOW();
+
         if(sample_count_threshold_reached) {
             // 当达到阈值且数据发送功能启用时，发送所有收集的数据
             if (sending_enabled && buffer_pos > 0) {
@@ -143,6 +158,8 @@ void ADS1220_Task(void *argument)
             sample_count_2 = 0; // 重置计数器
         }
         vTaskDelay(1 / portTICK_PERIOD_MS);
+        // SPI_CS3_HIGH();
+
     }
 }
 
@@ -184,6 +201,42 @@ void ADS1220_Init(void)
       HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
       /* CS2默认高电平 */
       HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
+
+
+
+
+
+
+
+      
+      __HAL_RCC_GPIOH_CLK_ENABLE();
+ 
+      GPIO_InitStruct.Pin = GPIO_PIN_7;
+      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+      GPIO_InitStruct.Pull = GPIO_PULLUP;
+      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+      HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+      /* CS3默认高电平 */
+      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_SET);
+      
+
+
+
+      /* CS4引脚配置 */
+      GPIO_InitStruct.Pin = GPIO_PIN_8;
+      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+      GPIO_InitStruct.Pull = GPIO_PULLUP;
+      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+      HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+      /* CS2默认高电平 */
+      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET);
+
+
+
+
+
+
+
       /* 所有初始化完成后，启用EXTI中断 */
       printf("ADS1220 initialization completed, enabling EXTI interrupts\r\n");
       
