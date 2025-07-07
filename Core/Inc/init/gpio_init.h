@@ -18,6 +18,7 @@ extern "C" {
 
 /* Function prototypes -------------------------------------------------------*/
 void MX_GPIO_Init(void);
+void MX_QUADSPI_Init(void);
 
 #ifdef __cplusplus
 }

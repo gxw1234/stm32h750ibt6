@@ -22,6 +22,8 @@
 #include "usb_device.h"
 #include "init/uart_init.h"
 #include "init/gpio_init.h"
+#include "stm32h7xx_hal_qspi.h"
+#include "init/gd25qxx.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -34,6 +36,9 @@
 #include "tasks/MP8865_task.h"
 #include "tasks/test_usb_send.h"
 #include "init/uart_init.h"
+#include <stdarg.h>
+#include <stdlib.h>
+#include "tasks/debug_task.h"
 
 /* USB命令处理任务声明 */
 extern void usb_command_pc_to_st_task(void *pvParameters);
@@ -65,6 +70,7 @@ TaskHandle_t lcdTaskHandle;  /* LCD线程句柄 */
 TaskHandle_t ads1220TaskHandle;  /* ADS1220线程句柄 */
 TaskHandle_t mp8865TaskHandle;  /* MP8865线程句柄 */
 TaskHandle_t UsbCmdTaskHandle; /* USB命令处理线程句柄 */
+TaskHandle_t DebugTaskHandle; /* USB命令处理线程句柄 */
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -72,7 +78,6 @@ TaskHandle_t UsbCmdTaskHandle; /* USB命令处理线程句柄 */
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MPU_Config(void);
-/* GPIO initialization function is now in gpio_init.h */
 void StartDefaultTask(void const * argument);
 void StartPrintTask(void * argument);  /* 新的打印线程函数声明 */
 
@@ -109,6 +114,8 @@ int main(void)
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
 
+  MX_QUADSPI_Init();
+
   /* USER CODE BEGIN Init */
 
   /* USER CODE END Init */
@@ -129,6 +136,30 @@ int main(void)
   
   MX_USB_DEVICE_Init();  
   
+
+
+
+  uint8_t test_write = 0xA6;
+  GD25QXX_EraseSector(0x000000);
+  GD25QXX_WriteByte(0x000000, test_write);
+  uint8_t after_write = GD25QXX_ReadByte(0x000000);
+  printf("QSPI Flash After Write: 0x%02X\r\n", after_write);
+  
+  uint8_t test_buf_write[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+  uint8_t test_buf_read[8] = {0};
+  GD25QXX_WriteBytes(0x000000, test_buf_write, 8);
+  GD25QXX_ReadBytes(0x000000, test_buf_read, 8);
+  printf("QSPI Flash Multi Write: ");
+  for (int i = 0; i < 8; ++i) printf("%02X ", test_buf_write[i]);
+  printf("\r\nQSPI Flash Multi Read:  ");
+  for (int i = 0; i < 8; ++i) printf("%02X ", test_buf_read[i]);
+  printf("\r\n");
+  
+
+
+
+
+
   /* 创建USB命令处理任务 */
   /* USER CODE END 2 */
 
@@ -157,23 +188,26 @@ int main(void)
   /*打印线程 */
   // xTaskCreate(StartPrintTask, "PrintTask", configMINIMAL_STACK_SIZE * 2, NULL, 1, (TaskHandle_t*)&printTaskHandle);
   
-  /* 创建LCD显示线程 */
-  xTaskCreate(LCD_Task, "LCDTask", configMINIMAL_STACK_SIZE * 4, NULL, 2, &lcdTaskHandle);
-  /* USER CODE END RTOS_THREADS */
+  // /* 创建LCD显示线程 */
+  // xTaskCreate(LCD_Task, "LCDTask", configMINIMAL_STACK_SIZE * 4, NULL, 2, &lcdTaskHandle);
+  // /* USER CODE END RTOS_THREADS */
 
-
-  /*创建ADS1220线程 */
-  xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
+  // /*创建ADS1220线程 */
+  // xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
   
-  /*创建MP8865线程 */
-  xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
+  // /*创建MP8865线程 */
+  // xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
-  /*创建USB发送测试线程 */
+  // /*创建USB发送测试线程 */
   xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
 
-  printf("----------%s %d-+++---\r\n", __FILE__, __LINE__);
+
   /*创建USB命令处理线程 */
   xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &UsbCmdTaskHandle);  // 提高优先级到5，提升USB数据处理性能
+
+
+  /*创建调试线程 */
+  xTaskCreate(debug_task, "DebugTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &DebugTaskHandle);
 
   /* Start scheduler */
   osKernelStart();

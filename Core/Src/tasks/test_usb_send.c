@@ -92,10 +92,8 @@ void USB_Send_Task(void *argument)
 {
 
     HAL_StatusTypeDef status = HAL_ERROR;
-
     /* Prevent compiler warning for unused argument */
     (void)argument;
-
     // vTaskDelay(pdMS_TO_TICKS(1000));
     // USB_Send_Task_Init();
     printf("--------1111111111-----\r\n");

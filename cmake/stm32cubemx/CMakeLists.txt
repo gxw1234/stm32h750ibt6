@@ -40,6 +40,9 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/tasks/usb_command_pc_to_st_task.c
     ../../Core/Src/init/uart_init.c
     ../../Core/Src/init/gpio_init.c
+    ../../Core/Src/init/gd25qxx.c
+    ../../Core/Src/init/qspi_init.c
+    ../../Core/Src/tasks/debug_task.c
     ../../Core/Src/Font_library/fonts.c
     ../../Core/Src/config/freertos.c
     ../../Core/Src/config/stm32h7xx_it.c
@@ -93,6 +96,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/pc_to_stm_command_handler/handler_spi.c
     ../../Core/Src/pc_to_stm_command_handler/handler_iic.c
     ../../Core/Src/pc_to_stm_command_handler/handler_gpio.c
+    ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_qspi.c
 )
 
 target_link_directories(stm32cubemx INTERFACE

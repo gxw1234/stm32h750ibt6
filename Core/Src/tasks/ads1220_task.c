@@ -210,6 +210,7 @@ void ADS1220_Init(void)
 
       
       __HAL_RCC_GPIOH_CLK_ENABLE();
+      __HAL_RCC_GPIOE_CLK_ENABLE();
  
       GPIO_InitStruct.Pin = GPIO_PIN_7;
       GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -233,6 +234,15 @@ void ADS1220_Init(void)
 
 
 
+    /* CS4引脚配置 */
+    GPIO_InitStruct.Pin = GPIO_PIN_9;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+    /* CS4默认低电平 */
+    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_SET); // 设置为低电平
 
 
 

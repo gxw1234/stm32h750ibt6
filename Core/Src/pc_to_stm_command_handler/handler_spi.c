@@ -6,15 +6,6 @@
 // SPI句柄定义
 static SPI_HandleTypeDef hspi5;
 
-/**
- * @brief 初始化SPI GPIO引脚
- * 
- * @param spi_index SPI接口索引
- * @return HAL_StatusTypeDef 初始化状态
- */
-//index 1 --> SPI5      {PF11 :SPI5_MOSI ,  PH6 :SPI5_SCK   ,PH7 :SPI5_MISO}
-
-
 
 static HAL_StatusTypeDef SPI_GPIO_Init(uint8_t spi_index)
 {
@@ -76,8 +67,6 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
         hspi5.Init.CLKPolarity = pConfig->CPOL ? SPI_POLARITY_HIGH : SPI_POLARITY_LOW;
         hspi5.Init.CLKPhase = pConfig->CPHA ? SPI_PHASE_2EDGE : SPI_PHASE_1EDGE;
         hspi5.Init.NSS = SPI_NSS_SOFT; // 软件NSS管理
-
-
         uint32_t spi_clock = HAL_RCC_GetPCLK2Freq(); // 获取PCLK2频率
         uint32_t prescaler = SPI_BAUDRATEPRESCALER_256; // 默认最低速度
         if (pConfig->ClockSpeedHz >= spi_clock / 2)
@@ -114,16 +103,7 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
     return HAL_ERROR; // 未知的SPI索引
 }
 
-/**
- * @brief SPI数据传输函数
- * 
- * @param spi_index SPI接口索引
- * @param pTxData 发送数据缓冲区
- * @param pRxData 接收数据缓冲区
- * @param DataSize 数据大小
- * @param Timeout 超时时间
- * @return HAL_StatusTypeDef 传输状态
- */
+
 HAL_StatusTypeDef Handler_SPI_Transmit(uint8_t spi_index, uint8_t *pTxData, uint8_t *pRxData, uint16_t DataSize, uint32_t Timeout)
 {
     if (spi_index == SPI_INDEX_0) { // SPI5
