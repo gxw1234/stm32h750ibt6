@@ -276,12 +276,6 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
 
-//   for (uint32_t i = 0; i < *Len; i++) {
-//     printf("Buf[%u]: 0x%02X\n", i, Buf[i]);  // 以十六进制格式打印索引和对应的字节值
-// }
-
-
-
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     USB_Data_TypeDef usbData;
     
@@ -299,8 +293,7 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
 
-    
-    // 继续接收
+
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, Buf);
     USBD_CDC_ReceivePacket(&hUsbDeviceHS);
     return (USBD_OK);

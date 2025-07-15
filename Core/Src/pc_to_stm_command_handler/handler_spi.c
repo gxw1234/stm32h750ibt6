@@ -1,7 +1,23 @@
 #include "handler_spi.h"
 #include "main.h"
+#include "FreeRTOS.h"
+#include "task.h"
+#include "cmsis_os.h"
+#include "stdio.h"
+#include "usbd_cdc_if.h"
+#include "string.h"
 
 static SPI_HandleTypeDef hspi5;
+
+
+#define SPI_RX_BUFFER_SIZE 512
+static uint8_t spi_rx_buffer[SPI_RX_BUFFER_SIZE];
+
+
+typedef struct {
+    GENERIC_CMD_HEADER header;
+    uint8_t data[SPI_RX_BUFFER_SIZE];  
+} SPI_Data_Packet;
 
 //index 0:SPI5   对应的引脚是PH6,PH7,PF11
 //{H6: P4,H7: P5,F11: P3}
@@ -78,7 +94,16 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
         hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
         hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         hspi5.Init.CRCPolynomial = 7;
-        return HAL_SPI_Init(&hspi5);
+
+        status = HAL_SPI_Init(&hspi5);
+        if (status == HAL_OK && !pConfig->Master) {
+
+            HAL_NVIC_SetPriority(SPI5_IRQn, 5, 0);
+            HAL_NVIC_EnableIRQ(SPI5_IRQn);
+            HAL_SPI_Receive_IT(&hspi5, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
+        }
+        
+        return status;
     }
     return HAL_ERROR; 
 }
@@ -95,4 +120,36 @@ HAL_StatusTypeDef Handler_SPI_Transmit(uint8_t spi_index, uint8_t *pTxData, uint
         }
     }
     return HAL_ERROR; 
+}
+
+
+void SPI5_IRQHandler(void)
+{
+    HAL_SPI_IRQHandler(&hspi5);
+}
+
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    if (hspi == &hspi5) {
+        SPI_Data_Packet packet;
+        packet.header.protocol_type = PROTOCOL_SPI;    // SPI协议
+        packet.header.cmd_id = CMD_READ;              // 读数据命令
+        packet.header.device_index = SPI_INDEX_1;     // SPI设备索引
+        packet.header.param_count = 0;                // 无参数
+        packet.header.data_len = SPI_RX_BUFFER_SIZE;  // 数据长度
+        packet.header.total_packets = sizeof(SPI_Data_Packet); // 总包大小
+        memcpy(packet.data, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
+        CDC_Transmit_HS((uint8_t*)&packet, sizeof(packet));
+        HAL_SPI_Receive_IT(&hspi5, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
+    }
+}
+
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
+{
+    if (hspi == &hspi5) {
+        printf("SPI5 error occurred, ErrorCode: 0x%lX\r\n", hspi->ErrorCode);
+        HAL_SPI_Receive_IT(&hspi5, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
+    }
 }
