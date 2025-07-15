@@ -31,7 +31,7 @@
 #define POWER_CHANNEL_UA        0x02  // 微安电流通道
 #define POWER_CHANNEL_MA        0x03  // 毫安电流通道
 
-// 为了支持大数据包和多包传输的定义
+
 #define CMD_END_MARKER 0xA5A5A5A5  // 命令结束标记符
 
 // 通用命令包头结构
@@ -68,41 +68,12 @@ typedef struct _SPI_CONFIG {
   unsigned int  ClockSpeedHz;    // SPI时钟频率:单位为HZ，硬件模式下最处50000000，最小390625，频率按2的倍数改变  
 } SPI_CONFIG, *PSPI_CONFIG;
 
-// 电压配置结构体
-typedef struct _VOLTAGE_CONFIG {
-  uint8_t   channel;     // 电源通道
-  uint16_t  voltage;     // 电压值（单位：mV）
-} VOLTAGE_CONFIG, *PVOLTAGE_CONFIG;
 
-/**
- * @brief 添加参数到参数缓冲区
- * 
- * @param buffer 目标缓冲区
- * @param pos 当前位置指针
- * @param data 参数数据
- * @param len 参数长度
- * @return int 添加后的位置
- */
-int Add_Parameter(uint8_t* buffer, int pos, void* data, uint16_t len);
 
-/**
- * @brief 从参数缓冲区获取参数
- * 
- * @param buffer 源缓冲区
- * @param pos 当前位置指针
- * @param data 参数数据目标缓冲区
- * @param max_len 最大参数长度
- * @return int 处理后的位置，-1表示错误
- */
+
 int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len);
 
-/**
- * @brief 处理接收到的命令
- * 
- * @param Buf 接收到的数据缓冲区
- * @param Len 数据长度
- * @return int8_t 处理结果，0表示成功
- */
+
 int8_t Process_Command(uint8_t* Buf, uint32_t *Len);
 
 #endif /* COMMAND_HANDLER_H */

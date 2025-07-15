@@ -65,12 +65,12 @@ extern void usb_command_pc_to_st_task(void *pvParameters);
 // UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
-osThreadId printTaskHandle;  /* 添加新的线程句柄 */
-TaskHandle_t lcdTaskHandle;  /* LCD线程句柄 */
-TaskHandle_t ads1220TaskHandle;  /* ADS1220线程句柄 */
-TaskHandle_t mp8865TaskHandle;  /* MP8865线程句柄 */
-TaskHandle_t UsbCmdTaskHandle; /* USB命令处理线程句柄 */
-TaskHandle_t DebugTaskHandle; /* USB命令处理线程句柄 */
+osThreadId printTaskHandle;  
+TaskHandle_t lcdTaskHandle; 
+TaskHandle_t ads1220TaskHandle;  
+TaskHandle_t mp8865TaskHandle; 
+TaskHandle_t UsbCmdTaskHandle; 
+TaskHandle_t DebugTaskHandle; 
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -139,6 +139,7 @@ int main(void)
 
 
 
+  /* 测试QSPI Flash */
   uint8_t test_write = 0xA6;
   GD25QXX_EraseSector(0x000000);
   GD25QXX_WriteByte(0x000000, test_write);
@@ -188,15 +189,15 @@ int main(void)
   /*打印线程 */
   // xTaskCreate(StartPrintTask, "PrintTask", configMINIMAL_STACK_SIZE * 2, NULL, 1, (TaskHandle_t*)&printTaskHandle);
   
-  // /* 创建LCD显示线程 */
-  // xTaskCreate(LCD_Task, "LCDTask", configMINIMAL_STACK_SIZE * 4, NULL, 2, &lcdTaskHandle);
-  // /* USER CODE END RTOS_THREADS */
+  /* 创建LCD显示线程 */
+  xTaskCreate(LCD_Task, "LCDTask", configMINIMAL_STACK_SIZE * 4, NULL, 2, &lcdTaskHandle);
+  /* USER CODE END RTOS_THREADS */
 
-  // /*创建ADS1220线程 */
-  // xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
+  /*创建ADS1220线程 */
+  xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
   
-  // /*创建MP8865线程 */
-  // xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
+  /*创建MP8865线程 */
+  xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
   // /*创建USB发送测试线程 */
   xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
@@ -206,8 +207,8 @@ int main(void)
   xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &UsbCmdTaskHandle);  // 提高优先级到5，提升USB数据处理性能
 
 
-  /*创建调试线程 */
-  xTaskCreate(debug_task, "DebugTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &DebugTaskHandle);
+  // /*创建调试线程 */
+  // xTaskCreate(debug_task, "DebugTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &DebugTaskHandle);
 
   /* Start scheduler */
   osKernelStart();

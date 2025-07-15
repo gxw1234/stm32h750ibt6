@@ -1,24 +1,22 @@
 #include "handler_spi.h"
 #include "main.h"
 
-
-
-// SPI句柄定义
 static SPI_HandleTypeDef hspi5;
 
+//index 0:SPI5   对应的引脚是PH6,PH7,PF11
+//{H6: P4,H7: P5,F11: P3}
 
 static HAL_StatusTypeDef SPI_GPIO_Init(uint8_t spi_index)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
-    if (spi_index == SPI_INDEX_0) { 
+    if (spi_index == SPI_INDEX_1) { 
         PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_SPI5;
         PeriphClkInitStruct.Spi45ClockSelection = RCC_SPI45CLKSOURCE_D2PCLK1;
         if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
         {
             return HAL_ERROR;
         }
-
         __HAL_RCC_SPI5_CLK_ENABLE();
         __HAL_RCC_GPIOF_CLK_ENABLE();
         __HAL_RCC_GPIOH_CLK_ENABLE();
@@ -28,33 +26,24 @@ static HAL_StatusTypeDef SPI_GPIO_Init(uint8_t spi_index)
         PH7     ------> SPI5_MISO
         */
         // 配置PH6和PH7
-        GPIO_InitStruct.Pin = GPIO_PIN_6;
+        GPIO_InitStruct.Pin = GPIO_PIN_6 | GPIO_PIN_7;
         GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
         GPIO_InitStruct.Pull = GPIO_NOPULL;
         GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
         GPIO_InitStruct.Alternate = GPIO_AF5_SPI5;
         HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-        
-        // 配置PF11
         GPIO_InitStruct.Pin = GPIO_PIN_11;
         HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
-        
         return HAL_OK;
     }
     return HAL_ERROR; 
 }
 
-/**
- * @brief 初始化SPI接口
- * 
- * @param spi_index SPI接口索引
- * @param pConfig SPI配置参数
- * @return HAL_StatusTypeDef 初始化状态
- */
+
 HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
 {
     HAL_StatusTypeDef status;
-    if (spi_index == SPI_INDEX_0) { // SPI5
+    if (spi_index == SPI_INDEX_1) { // SPI5
         status = SPI_GPIO_Init(spi_index);
         if (status != HAL_OK) {
             return status;
@@ -83,39 +72,27 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
             prescaler = SPI_BAUDRATEPRESCALER_64;
         else if (pConfig->ClockSpeedHz >= spi_clock / 128)
             prescaler = SPI_BAUDRATEPRESCALER_128;
-
-
-
-        prescaler = SPI_BAUDRATEPRESCALER_4;
-
+        // prescaler = SPI_BAUDRATEPRESCALER_4;
         hspi5.Init.BaudRatePrescaler = prescaler;
-        // hspi5.Init.FirstBit = pConfig->LSBFirst ? SPI_FIRSTBIT_LSB : SPI_FIRSTBIT_MSB;
-        hspi5.Init.FirstBit = SPI_FIRSTBIT_LSB ;
+        hspi5.Init.FirstBit = pConfig->LSBFirst ? SPI_FIRSTBIT_LSB : SPI_FIRSTBIT_MSB;
         hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
         hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         hspi5.Init.CRCPolynomial = 7;
         return HAL_SPI_Init(&hspi5);
-
-        
     }
-    
-    
-    return HAL_ERROR; // 未知的SPI索引
+    return HAL_ERROR; 
 }
 
 
 HAL_StatusTypeDef Handler_SPI_Transmit(uint8_t spi_index, uint8_t *pTxData, uint8_t *pRxData, uint16_t DataSize, uint32_t Timeout)
 {
-    if (spi_index == SPI_INDEX_0) { // SPI5
+    if (spi_index == SPI_INDEX_1) { // SPI5
         if (pRxData != NULL) {
-
             HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(&hspi5, pTxData, pRxData, DataSize, Timeout);
             return status;
         } else {
             return HAL_SPI_Transmit(&hspi5, pTxData, DataSize, Timeout);
         }
     }
-    
-    
-    return HAL_ERROR; // 未知的SPI索引
+    return HAL_ERROR; 
 }

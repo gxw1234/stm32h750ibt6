@@ -90,14 +90,12 @@ HAL_StatusTypeDef Test_I2C3_Slave_Init(void)
  */
 void USB_Send_Task(void *argument)
 {
-
     HAL_StatusTypeDef status = HAL_ERROR;
     /* Prevent compiler warning for unused argument */
     (void)argument;
     // vTaskDelay(pdMS_TO_TICKS(1000));
     // USB_Send_Task_Init();
     printf("--------1111111111-----\r\n");
-
     if (Test_I2C3_Slave_Init() == HAL_OK) {
         printf("I2C3 slave mode init success, address: 0x%02X\r\n", 0x6e);
         status = HAL_I2C_EnableListen_IT(&hi2c3_test_);

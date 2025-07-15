@@ -13,11 +13,6 @@ void debug_task(void *argument)
     while (1)
     {
 
-
-
-
-
-
         // ret = CDC_Transmit_HS(data,1);
         // printf("ret: %d\r\n", ret);
 
