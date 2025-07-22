@@ -145,9 +145,9 @@ void ADS1220_Task(void *argument)
                 buffer_pos = 0; // 重置缓冲区位置
             }
             float avg_current_mA = current_mA / 1000;  
-            char buffer1[50];
-            sprintf(buffer1, "current_mA :%.6f  mA\r\n", avg_current_mA);
-            // printf(buffer1); 
+
+
+            // printf("current_mA : %.6f mA\r\n", avg_current_mA);
             char current_str[30] = {0};
             sprintf(current_str, "%.3f mA", avg_current_mA);
             LCD_Show_String(VALUE_X_POS, CURRENT_MA_Y_POS, current_str, COLOR_CYAN, COLOR_BLACK, FONT_1608);
@@ -184,23 +184,23 @@ void ADS1220_Init(void)
       {
         Error_Handler();
       }
-      GPIO_InitTypeDef GPIO_InitStruct = {0};
-      GPIO_InitStruct.Pin = GPIO_PIN_11;
-      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-      GPIO_InitStruct.Pull = GPIO_PULLUP;
-      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-      HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-      /* CS1默认高电平 */
-      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
+    //   GPIO_InitTypeDef GPIO_InitStruct = {0};
+    //   GPIO_InitStruct.Pin = GPIO_PIN_11;
+    //   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    //   GPIO_InitStruct.Pull = GPIO_PULLUP;
+    //   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    //   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+    //   /* CS1默认高电平 */
+    //   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_11, GPIO_PIN_SET);
       
-      /* CS2引脚配置 */
-      GPIO_InitStruct.Pin = GPIO_PIN_15;
-      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-      GPIO_InitStruct.Pull = GPIO_PULLUP;
-      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-      HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-      /* CS2默认高电平 */
-      HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
+    //   /* CS2引脚配置 */
+    //   GPIO_InitStruct.Pin = GPIO_PIN_15;
+    //   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    //   GPIO_InitStruct.Pull = GPIO_PULLUP;
+    //   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    //   HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+    //   /* CS2默认高电平 */
+    //   HAL_GPIO_WritePin(GPIOE, GPIO_PIN_15, GPIO_PIN_SET);
 
 
 
@@ -209,43 +209,28 @@ void ADS1220_Init(void)
 
 
       
-      __HAL_RCC_GPIOH_CLK_ENABLE();
-      __HAL_RCC_GPIOE_CLK_ENABLE();
+    //   __HAL_RCC_GPIOH_CLK_ENABLE();
+    //   __HAL_RCC_GPIOE_CLK_ENABLE();
  
-      GPIO_InitStruct.Pin = GPIO_PIN_7;
-      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-      GPIO_InitStruct.Pull = GPIO_PULLUP;
-      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-      HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-      /* CS3默认高电平 */
-      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_SET);
+    //   GPIO_InitStruct.Pin = GPIO_PIN_7;
+    //   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    //   GPIO_InitStruct.Pull = GPIO_PULLUP;
+    //   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    //   HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+    //   /* CS3默认高电平 */
+    //   HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_SET);
       
 
 
 
-      /* CS4引脚配置 */
-      GPIO_InitStruct.Pin = GPIO_PIN_8;
-      GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-      GPIO_InitStruct.Pull = GPIO_PULLUP;
-      GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-      HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
-      /* CS2默认高电平 */
-      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET);
-
-
-
-    /* CS4引脚配置 */
-    GPIO_InitStruct.Pin = GPIO_PIN_9;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_PULLUP;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
-
-    /* CS4默认低电平 */
-    HAL_GPIO_WritePin(GPIOE, GPIO_PIN_9, GPIO_PIN_SET); // 设置为低电平
-
-
-
+    //   /* CS4引脚配置 */
+    //   GPIO_InitStruct.Pin = GPIO_PIN_8;
+    //   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    //   GPIO_InitStruct.Pull = GPIO_PULLUP;
+    //   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+    //   HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+    //   /* CS4默认高电平 */
+    //   HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET);
 
       /* 所有初始化完成后，启用EXTI中断 */
       printf("ADS1220 initialization completed, enabling EXTI interrupts\r\n");
@@ -284,20 +269,24 @@ uint8_t SPI_TransmitReceive(uint8_t data) {
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
     if(GPIO_Pin == GPIO_PIN_10)
+    //微安档
     {
-       SPI_CS2_LOW();
-       uint32_t adc_value = 0;
-       uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
-       uint8_t mid = SPI_TransmitReceive(0xFF);  // 读取中8位
-       uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
-       SPI_CS2_HIGH();
-       adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
-        float voltage = Convert_ADC_To_Voltage(adc_value);  
-        current_uA = (2008*voltage +  0.27) /1000 ;
+    //    SPI_CS2_LOW();
+    //    uint32_t adc_value = 0;
+    //    uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
+    //    uint8_t mid = SPI_TransmitReceive(0xFF);  // 读取中8位
+    //    uint8_t lsb = SPI_TransmitReceive(0xFF);  // 读取低8位
+    //    SPI_CS2_HIGH();
+    //    adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
+    //     float voltage = Convert_ADC_To_Voltage(adc_value);  
+    //     current_uA = (2008*voltage +  0.27) /1000 ;
+
+    //     current_mA += current_uA;
 
      }
      else if(GPIO_Pin == GPIO_PIN_9)
      {
+        //毫安档
        SPI_CS1_LOW();
        uint32_t adc_value = 0;
        uint8_t msb = SPI_TransmitReceive(0xFF);  // 读取高8位
@@ -306,28 +295,32 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
        SPI_CS1_HIGH();
        adc_value = (uint32_t)msb << 16 | (uint32_t)mid << 8 | lsb;
        float voltage = Convert_ADC_To_Voltage(adc_value);  
-       float current_temp = voltage * 1189.7 + 0.222;
-       uint8_t data_type = 0; 
-       if (current_temp < 1)
-       {
-           if(current_uA != 0)
-           {
-                current_send_temp = current_uA;
-                current_mA += current_uA;
-                data_type = 1; // 微安数据
-           
-           }
-       } else
-       {
-           current_mA += current_temp;
-           current_send_temp = current_temp;
-           data_type = 0; // 毫安数据
-       }
-       if (sending_enabled && buffer_pos < DATA_BUFFER_SIZE - sizeof(float) - 1) { 
-            data_buffer[buffer_pos++] = data_type;
-            memcpy(&data_buffer[buffer_pos], &current_send_temp, sizeof(float));
-            buffer_pos += sizeof(float);
-            }
+       float current_temp = voltage * 1170.5 + 0.222;
+
+
+       current_mA += current_temp;
+
+
+    //    uint8_t data_type = 0; 
+    //    if (current_temp < 1)
+    //    {
+    //        if(current_uA != 0)
+    //        {
+    //             current_send_temp = current_uA;
+    //             current_mA += current_uA;
+    //             data_type = 1; // 微安数据
+    //        }
+    //    } else
+    //    {
+    //        current_mA += current_temp;
+    //        current_send_temp = current_temp;
+    //        data_type = 0; // 毫安数据
+    //    }
+    //    if (sending_enabled && buffer_pos < DATA_BUFFER_SIZE - sizeof(float) - 1) { 
+    //         data_buffer[buffer_pos++] = data_type;
+    //         memcpy(&data_buffer[buffer_pos], &current_send_temp, sizeof(float));
+    //         buffer_pos += sizeof(float);
+    //         }
        sample_count_2++;
        if(sample_count_2 >= 1000)
        {

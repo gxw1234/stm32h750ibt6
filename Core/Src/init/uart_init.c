@@ -4,7 +4,7 @@
 #include <sys/unistd.h>
 
 UART_HandleTypeDef huart1;
-/* UART初始化函数 */
+
 void MX_USART1_UART_Init(void)
 {
     
@@ -44,17 +44,15 @@ int _write(int file, char *ptr, int len)
     return -1;
 }
 
-/* 初始化串口和重定向 */
+
 void UART_Init(void)
 {
-    /* 初始化UART */
-    MX_USART1_UART_Init();
     
-    /* 禁用缓冲 */
+    MX_USART1_UART_Init();
     setvbuf(stdout, NULL, _IONBF, 0);
 }
 
-/* 获取UART句柄 */
+
 UART_HandleTypeDef* UART_GetHandle(void)
 {
     return &huart1;

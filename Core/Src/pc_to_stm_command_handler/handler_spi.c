@@ -19,9 +19,14 @@ typedef struct {
     uint8_t data[SPI_RX_BUFFER_SIZE];  
 } SPI_Data_Packet;
 
-//index 0:SPI5   对应的引脚是PH6,PH7,PF11
-//{H6: P4,H7: P5,F11: P3}
+/**Sindex 1:SPI5   对应的引脚是PH6,PH7,PF11,H8
+CS          对应 P6  (H8)
+MOSI        对应 P3  （F11)
+SCK         对应 P4   (H6)
+MISO        对应 P5   (H7)
 
+{H6: P4,H7: P5,F11: P3}
+*/
 static HAL_StatusTypeDef SPI_GPIO_Init(uint8_t spi_index)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
@@ -50,6 +55,16 @@ static HAL_StatusTypeDef SPI_GPIO_Init(uint8_t spi_index)
         HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
         GPIO_InitStruct.Pin = GPIO_PIN_11;
         HAL_GPIO_Init(GPIOF, &GPIO_InitStruct);
+
+        /* CS0引脚配置 */
+        GPIO_InitStruct.Pin = GPIO_PIN_8;
+        GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+        GPIO_InitStruct.Pull = GPIO_PULLUP;
+        GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
+        HAL_GPIO_Init(GPIOH, &GPIO_InitStruct);
+        /* CS0默认高电平 */
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET);
+
         return HAL_OK;
     }
     return HAL_ERROR; 
@@ -88,46 +103,45 @@ HAL_StatusTypeDef Handler_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig)
             prescaler = SPI_BAUDRATEPRESCALER_64;
         else if (pConfig->ClockSpeedHz >= spi_clock / 128)
             prescaler = SPI_BAUDRATEPRESCALER_128;
-        // prescaler = SPI_BAUDRATEPRESCALER_4;
+        prescaler = SPI_BAUDRATEPRESCALER_4;
         hspi5.Init.BaudRatePrescaler = prescaler;
         hspi5.Init.FirstBit = pConfig->LSBFirst ? SPI_FIRSTBIT_LSB : SPI_FIRSTBIT_MSB;
         hspi5.Init.TIMode = SPI_TIMODE_DISABLE;
         hspi5.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         hspi5.Init.CRCPolynomial = 7;
-
         status = HAL_SPI_Init(&hspi5);
         if (status == HAL_OK && !pConfig->Master) {
-
             HAL_NVIC_SetPriority(SPI5_IRQn, 5, 0);
             HAL_NVIC_EnableIRQ(SPI5_IRQn);
             HAL_SPI_Receive_IT(&hspi5, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
         }
-        
         return status;
     }
     return HAL_ERROR; 
 }
 
-
 HAL_StatusTypeDef Handler_SPI_Transmit(uint8_t spi_index, uint8_t *pTxData, uint8_t *pRxData, uint16_t DataSize, uint32_t Timeout)
 {
+    HAL_StatusTypeDef status;
     if (spi_index == SPI_INDEX_1) { // SPI5
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_RESET);
         if (pRxData != NULL) {
-            HAL_StatusTypeDef status = HAL_SPI_TransmitReceive(&hspi5, pTxData, pRxData, DataSize, Timeout);
+            status = HAL_SPI_TransmitReceive(&hspi5, pTxData, pRxData, DataSize, Timeout);
             return status;
         } else {
-            return HAL_SPI_Transmit(&hspi5, pTxData, DataSize, Timeout);
+            status = HAL_SPI_Transmit(&hspi5, pTxData, DataSize, Timeout);
         }
+        HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET);
+       return status;
+
     }
     return HAL_ERROR; 
 }
-
 
 void SPI5_IRQHandler(void)
 {
     HAL_SPI_IRQHandler(&hspi5);
 }
-
 
 void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {

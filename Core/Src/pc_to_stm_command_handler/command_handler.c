@@ -26,37 +26,31 @@ static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
        pConfig->LSBFirst, pConfig->SelPolarity, pConfig->ClockSpeedHz);
        
     HAL_StatusTypeDef status = Handler_SPI_Init(spi_index, pConfig);
-    if (status == HAL_OK) {
+    // if (status == HAL_OK) {
 
-        printf("SPI init SUCCESSFUL: %d\r\n", spi_index);
-    } else {
+    //     printf("SPI init SUCCESSFUL: %d\r\n", spi_index);
+    // } else {
 
-        printf("SPI init fail: %d, eer: %d\r\n", spi_index, status);
-    }
+    //     printf("SPI init fail: %d, eer: %d\r\n", spi_index, status);
+    // }
 
 }
 
-/**
- * @brief 处理电压设置命令
- * 
- * @param channel 电源通道
- * @param voltage_mv 电压值(mV)
- */
+
 static void Process_Power_SetVoltage(uint8_t channel, uint16_t voltage_mv) {
-
-
-    uint8_t voltage_reg_value = (uint8_t)voltage_mv;
-    if (voltage_reg_value < 12) voltage_reg_value = 12;
-    if (voltage_reg_value > 255) voltage_reg_value = 255;
-    HAL_StatusTypeDef status = MP8865_SetVoltage(voltage_reg_value);
-    if (status == HAL_OK) {
-        printf("MP8865 Set voltage success, reg value: 0x%02X\r\n", voltage_reg_value);
-    } else {
-
-        printf("MP8865 Set voltage failed, error code: %d\r\n", status);
-
-    }
-
+    // 将毫伏转换为伏特
+    float voltage_v = voltage_mv / 1000.0f;
+    
+    // printf("Power Set Voltage: Channel=%d, Target=%.3fV (%dmV)\r\n", 
+    //        channel, voltage_v, voltage_mv);
+    
+    HAL_StatusTypeDef status = MP8865_SetVoltageV(voltage_v);
+    
+    // if (status == HAL_OK) {
+    //     printf("MP8865 Set voltage success: %.3fV\r\n", voltage_v);
+    // } else {
+    //     printf("MP8865 Set voltage failed, error code: %d\r\n", status);
+    // }
 }
 
 
@@ -106,31 +100,14 @@ static void Process_IIC_Init(uint8_t iic_index, PIIC_CONFIG pConfig) {
 
 }
 
-/**
- * @brief 处理IIC从机写数据命令
- * 
- * @param iic_index IIC索引
- * @param pData 数据缓冲区
- * @param data_len 数据长度
- * @param timeout 超时时间
- */
-static void Process_IIC_SlaveWrite(uint8_t iic_index, uint8_t* pData, uint16_t data_len, uint32_t timeout) {
-    char buffer[128];
 
-    sprintf(buffer, "STM32_IIC SlaveWrite: Index=%d, DataLen=%d, Timeout=%lu\r\n", 
-            iic_index, data_len, timeout);
+static void Process_IIC_SlaveWrite(uint8_t iic_index, uint8_t* pData, uint16_t data_len, uint32_t timeout) {
+
     HAL_StatusTypeDef status = Handler_IIC_SlaveWriteBytes(iic_index, pData, data_len, timeout);
     
 }
 
-/**
- * @brief 处理读取电流数据命令
- * 
- * @param channel 电流通道 (POWER_CHANNEL_UA 或 POWER_CHANNEL_MA)
- * @param response_buf 响应缓冲区
- * @param max_len 最大响应长度
- * @return int 响应数据长度
- */
+
 static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf, int max_len) {
 
     
@@ -145,72 +122,44 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
         response_header->cmd_id = POWER_CMD_READ_CURRENT_DATA;
         response_header->device_index = channel;
         response_header->param_count = 0;
-        response_header->data_len = sizeof(float);
-        
+        response_header->data_len = sizeof(float); 
         memcpy(response_buf + sizeof(GENERIC_CMD_HEADER), &current_value, sizeof(float));
         response_len = sizeof(GENERIC_CMD_HEADER) + sizeof(float);
-        
-
         printf("Current data: %.3f\r\n", current_value);
     }
     
     return response_len;
 }
 
-/**
- * @brief 处理SPI写数据命令
- * 
- * @param spi_index SPI索引
- * @param data 数据缓冲区
- * @param data_len 数据长度
- */
+
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
 
 
     
     HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
-    char status_buffer[64];
-    if (status == HAL_OK) {
+    // if (status == HAL_OK) {
 
-        printf("SPI Write Success\r\n");
-    } else {
+    //     printf("SPI Write Success\r\n");
+    // } else {
 
-        printf("SPI Write Failed, error code: %d\r\n", status);
-    }
+    //     printf("SPI Write Failed, error code: %d\r\n", status);
+    // }
 }
 
-/**
- * @brief 处理GPIO设置输出命令
- * 
- * @param gpio_index GPIO索引
- * @param output_mask 输出引脚掩码
- */
-static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
-    char buffer[128];
 
+static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
 
     HAL_StatusTypeDef status = Handler_GPIO_SetOutput(gpio_index, output_mask);
     
 
 }
 
-/**
- * @brief 处理GPIO写数据命令
- * 
- * @param gpio_index GPIO索引
- * @param write_value 写入的值
- */
+
 static void Process_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
     HAL_StatusTypeDef status = Handler_GPIO_Write(gpio_index, write_value);
 }
 
-/**
- * @brief 处理接收到的命令
- * 
- * @param Buf 接收到的数据缓冲区
- * @param Len 数据长度
- * @return int8_t 处理结果，0表示成功
- */
+
 int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
    
     if (*Len >= sizeof(GENERIC_CMD_HEADER)) {
@@ -240,9 +189,7 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         break;
                     }
                     case CMD_WRITE: {
-                        // SPI写命令
                         if (header->data_len > 0) {
-                            // 数据部分开始位置：命令头 + 参数区
                             int data_pos = sizeof(GENERIC_CMD_HEADER);
                             
                             for (int i = 0; i < header->param_count; i++) {
@@ -260,13 +207,10 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                     case CMD_READ:
                     case CMD_TRANSFER:
                         {
-
                             printf("Unknown SPI command ID: 0x%02X\r\n", header->cmd_id);
                         }
                         break;
                     default: {
-
-
                         printf("Unknown SPI command ID: 0x%02X\r\n", header->cmd_id);
                         break;
                     }
@@ -289,47 +233,48 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                     }
                 }
                 break;
-            }
-            
+            }         
             case PROTOCOL_UART: {
 
                 break;
             }
             case PROTOCOL_GPIO: {
                 switch (header->cmd_id) {
-                    case CMD_SET_DIR: {
-                        if (header->param_count > 0) {
-                            int pos = sizeof(GENERIC_CMD_HEADER);
-                            uint8_t output_mask;
-                            pos = Get_Parameter(Buf, pos, &output_mask, sizeof(uint8_t));
-                            if (pos > 0) {
-                                Process_GPIO_SetOutput(header->device_index, output_mask);
-                            } else {
-
-                                printf("Error: Invalid parameter format for GPIO_SET_DIR\r\n");
-    
-                            }
+                    case GPIO_DIR_OUTPUT: {
+                        int pos = sizeof(GENERIC_CMD_HEADER);
+                        uint8_t output_mask;
+                        pos = Get_Parameter(Buf, pos, &output_mask, sizeof(uint8_t));
+                        if (pos > 0) {
+                            Process_GPIO_SetOutput(header->device_index, output_mask);
                         } else {
-
-                            printf("Error: No parameters for GPIO_SET_DIR command\r\n");
+                            printf("Error: Invalid parameter format for GPIO_DIR_OUTPUT\r\n");
                         }
                         break;
                     }
-                    case CMD_INIT: {
+                    case GPIO_DIR_OUTPUT_OD: {
+                        int pos = sizeof(GENERIC_CMD_HEADER);
+                        uint8_t output_mask;
+                        pos = Get_Parameter(Buf, pos, &output_mask, sizeof(uint8_t));
+                        if (pos > 0) {
+                            Handler_GPIO_SetOpenDrain(header->device_index, output_mask);
+                        } else {
+                            printf("Error: Invalid parameter format for GPIO_DIR_OUTPUT_OD\r\n");
+                        }
+                        break;
+                    }
+                    case GPIO_DIR_INPUT: {
  
                         break;
                     }
-                    case CMD_WRITE: {
-                        // 使用参数格式解析数据
+                    case GPIO_DIR_WRITE: {
                         if (header->param_count > 0) {
                             int pos = sizeof(GENERIC_CMD_HEADER);
                             uint8_t gpio_value;
                             pos = Get_Parameter(Buf, pos, &gpio_value, sizeof(uint8_t));
                             if (pos > 0) {
-                                // printf("GPIO Write: Index=%d, Value=0x%02X\r\n", header->device_index, gpio_value);
                                 Process_GPIO_Write(header->device_index, gpio_value);
                             } else {
-                                char* error_msg = "Error: Invalid parameter format for GPIO_WRITE\r\n";
+
 
                                 printf("Error: Invalid parameter format for GPIO_WRITE\r\n");
                             }

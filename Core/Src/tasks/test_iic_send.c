@@ -1,9 +1,5 @@
-/**
- * @file test_usb_send.c
- * @brief USB发送测试任务的实现
- */
 
-#include "tasks/test_usb_send.h"
+#include "tasks/test_iic_send.h"
 #include "stm32h7xx_hal_def.h"
 #include "usbd_cdc_if.h"
 #include "cmsis_os.h"

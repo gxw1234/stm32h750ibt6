@@ -13,12 +13,20 @@
 #define PROTOCOL_GPIO       0x04    // GPIO协议
 #define PROTOCOL_POWER      0x05    // 电源协议
 
+
 // 通用命令ID定义
-#define CMD_INIT            0x01    // 初始化命令
-#define CMD_WRITE           0x02    // 写数据命令
-#define CMD_READ            0x03    // 读数据命令
-#define CMD_TRANSFER        0x04    // 读写数据命令
-#define CMD_SET_DIR         0x04    // 设置GPIO方向
+#define CMD_INIT            0x01    
+#define CMD_WRITE           0x02    
+#define CMD_READ            0x03    
+#define CMD_TRANSFER        0x04    
+
+//---------------GPIO------------------
+#define GPIO_DIR_OUTPUT  0x01    // 输出模式
+#define GPIO_DIR_OUTPUT_OD  0x02    // 输出开漏
+#define GPIO_DIR_INPUT   0x00    // 输入模式
+#define GPIO_DIR_WRITE   0x03    // 写入
+
+
 
 // 电源命令ID定义
 #define POWER_CMD_SET_VOLTAGE       0x01  // 设置电压命令

@@ -20,7 +20,6 @@ QueueHandle_t usbMessageQueueHandle = NULL;
 void usb_command_pc_to_st_task(void *argument)
 {
 
-    // 初始化累积缓冲区状态
     accumulated_length = 0;
     packet_complete = 0;
     memset(big_buffer, 0, BIG_BUFFER_SIZE);

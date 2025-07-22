@@ -34,7 +34,7 @@
 #include "tasks/lcd_task.h"
 #include "tasks/ads1220_task.h"
 #include "tasks/MP8865_task.h"
-#include "tasks/test_usb_send.h"
+#include "tasks/test_iic_send.h"
 #include "init/uart_init.h"
 #include <stdarg.h>
 #include <stdlib.h>
@@ -62,7 +62,6 @@ extern void usb_command_pc_to_st_task(void *pvParameters);
 
 /* Private variables ---------------------------------------------------------*/
 
-// UART_HandleTypeDef huart1;
 
 osThreadId defaultTaskHandle;
 osThreadId printTaskHandle;  
@@ -128,6 +127,8 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+  /* GPIO初始化
+  只有GPIO的配置 */
   MX_GPIO_Init();
   
   /* USER CODE BEGIN 2 */
@@ -140,21 +141,21 @@ int main(void)
 
 
   /* 测试QSPI Flash */
-  uint8_t test_write = 0xA6;
-  GD25QXX_EraseSector(0x000000);
-  GD25QXX_WriteByte(0x000000, test_write);
-  uint8_t after_write = GD25QXX_ReadByte(0x000000);
-  printf("QSPI Flash After Write: 0x%02X\r\n", after_write);
+  // uint8_t test_write = 0xA6;
+  // GD25QXX_EraseSector(0x000000);
+  // GD25QXX_WriteByte(0x000000, test_write);
+  // uint8_t after_write = GD25QXX_ReadByte(0x000000);
+  // printf("QSPI Flash After Write: 0x%02X\r\n", after_write);
   
-  uint8_t test_buf_write[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
-  uint8_t test_buf_read[8] = {0};
-  GD25QXX_WriteBytes(0x000000, test_buf_write, 8);
-  GD25QXX_ReadBytes(0x000000, test_buf_read, 8);
-  printf("QSPI Flash Multi Write: ");
-  for (int i = 0; i < 8; ++i) printf("%02X ", test_buf_write[i]);
-  printf("\r\nQSPI Flash Multi Read:  ");
-  for (int i = 0; i < 8; ++i) printf("%02X ", test_buf_read[i]);
-  printf("\r\n");
+  // uint8_t test_buf_write[8] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
+  // uint8_t test_buf_read[8] = {0};
+  // GD25QXX_WriteBytes(0x000000, test_buf_write, 8);
+  // GD25QXX_ReadBytes(0x000000, test_buf_read, 8);
+  // printf("QSPI Flash Multi Write: ");
+  // for (int i = 0; i < 8; ++i) printf("%02X ", test_buf_write[i]);
+  // printf("\r\nQSPI Flash Multi Read:  ");
+  // for (int i = 0; i < 8; ++i) printf("%02X ", test_buf_read[i]);
+  // printf("\r\n");
   
 
 
@@ -194,7 +195,7 @@ int main(void)
   /* USER CODE END RTOS_THREADS */
 
   /*创建ADS1220线程 */
-  // xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
+  xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
   
   /*创建MP8865线程 */
   xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
