@@ -308,7 +308,6 @@ void LCD_Init(void)
     
     // 屏幕初始化，清为红色(便于调试，更容易看出屏幕是否工作)
     LCD_Clear(COLOR_RED);
-    printf("LCD_Init: Screen cleared to RED\r\n");
 }
 
 /* 显示ASCII字符 */

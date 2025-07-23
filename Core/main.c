@@ -195,7 +195,7 @@ int main(void)
   /* USER CODE END RTOS_THREADS */
 
   /*创建ADS1220线程 */
-  xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
+  // xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
   
   /*创建MP8865线程 */
   xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);

@@ -5,7 +5,7 @@
 #include "pc_to_stm_command_handler/handler_spi.h" 
 #include "pc_to_stm_command_handler/handler_iic.h" 
 #include "handler_gpio.h" 
-
+#include "pc_to_stm_command_handler/handler_reset_usb3300_stm32.h" 
 
 int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
     PARAM_HEADER header;
@@ -238,6 +238,24 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
 
                 break;
             }
+            case PROTOCOL_RESETSTM32: {
+
+                switch (header->cmd_id) {
+
+                    case CMD_INIT:
+                    {
+
+                        handler_reset_usb3300_stm32();
+
+
+                        break;
+                    }
+                }
+
+
+                break;
+            }
+            
             case PROTOCOL_GPIO: {
                 switch (header->cmd_id) {
                     case GPIO_DIR_OUTPUT: {
@@ -335,6 +353,8 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 }
                 break;
             }
+
+
             default: {
 
                 printf("Unknown protocol type: 0x%02X\r\n", header->protocol_type);

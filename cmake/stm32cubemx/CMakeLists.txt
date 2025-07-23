@@ -95,6 +95,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/pc_to_stm_command_handler/command_handler.c
     ../../Core/Src/pc_to_stm_command_handler/handler_spi.c
     ../../Core/Src/pc_to_stm_command_handler/handler_iic.c
+    ../../Core/Src/pc_to_stm_command_handler/handler_reset_usb3300_stm32.c
     ../../Core/Src/pc_to_stm_command_handler/handler_gpio.c
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_qspi.c
 )

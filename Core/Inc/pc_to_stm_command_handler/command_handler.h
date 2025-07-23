@@ -12,7 +12,7 @@
 #define PROTOCOL_UART       0x03    // UART协议
 #define PROTOCOL_GPIO       0x04    // GPIO协议
 #define PROTOCOL_POWER      0x05    // 电源协议
-
+#define PROTOCOL_RESETSTM32      0x06    // 复位STM32
 
 // 通用命令ID定义
 #define CMD_INIT            0x01    
