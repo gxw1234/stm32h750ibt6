@@ -6,6 +6,7 @@
 #include "pc_to_stm_command_handler/handler_iic.h" 
 #include "handler_gpio.h" 
 #include "pc_to_stm_command_handler/handler_reset_usb3300_stm32.h" 
+#include "usbd_cdc_if.h"
 
 int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
     PARAM_HEADER header;
@@ -134,16 +135,49 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
 
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
 
+    HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
+
+}
+
+static void Process_SPI_Queue_start(uint8_t spi_index) {
 
     
-    HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
-    // if (status == HAL_OK) {
 
-    //     printf("SPI Write Success\r\n");
-    // } else {
+}
 
-    //     printf("SPI Write Failed, error code: %d\r\n", status);
-    // }
+
+static void Process_SPI_Queue_stop(uint8_t spi_index) {
+     
+
+}
+
+static void Process_SPI_Queue_Status(uint8_t spi_index) {
+    
+    extern uint8_t Frame_Queue_Count(void);
+    uint8_t queue_count = 3;
+    
+    printf("SPI Queue Status Query: Index=%d, Count=%d\r\n", spi_index, queue_count);
+    
+    // 定义队列状态响应数据包
+    typedef struct {
+        GENERIC_CMD_HEADER header;
+        uint8_t queue_status;  // 队列状态数据
+    } Queue_Status_Response;
+    
+    Queue_Status_Response response;
+    
+    // 设置协议头
+    response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
+    response.header.cmd_id = CMD_QUEUE_STATUS;           // 队列状态命令
+    response.header.device_index = spi_index;            // 使用传入的索引
+    response.header.param_count = 0;                     // 无参数
+    response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
+    response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
+    
+    response.queue_status = queue_count;
+    
+    uint8_t ret = CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+    printf("Queue status sent, ret: %u, count: %d\r\n", ret, queue_count);
 }
 
 
@@ -204,6 +238,20 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         }
                         break;
                     }
+                    case CMD_QUEUE_STATUS: {
+                        Process_SPI_Queue_Status(header->device_index);
+                        break;
+                    }
+                    case CMD_QUEUE_START: {
+                        Process_SPI_Queue_start(header->device_index);
+                        break;
+                    }
+                    case CMD_QUEUE_STOP: {
+                        Process_SPI_Queue_stop(header->device_index);
+                        break;
+                    }
+                    
+                    
                     case CMD_READ:
                     case CMD_TRANSFER:
                         {

@@ -18,7 +18,10 @@
 #define CMD_INIT            0x01    
 #define CMD_WRITE           0x02    
 #define CMD_READ            0x03    
-#define CMD_TRANSFER        0x04    
+#define CMD_TRANSFER        0x04
+#define CMD_QUEUE_STATUS    0x05    // 队列状态查询命令     
+#define CMD_QUEUE_START    0x06    // 队列状态查询命令    
+#define CMD_QUEUE_STOP    0x07    // 队列状态查询命令    
 
 //---------------GPIO------------------
 #define GPIO_DIR_OUTPUT  0x01    // 输出模式
@@ -84,4 +87,9 @@ int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len);
 
 int8_t Process_Command(uint8_t* Buf, uint32_t *Len);
 
+static void Process_SPI_Queue_Status(uint8_t spi_index);
+
+static void Process_SPI_Queue_start(uint8_t spi_index);
+
+static void Process_SPI_Queue_stop(uint8_t spi_index);
 #endif /* COMMAND_HANDLER_H */
