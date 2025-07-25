@@ -286,7 +286,7 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
     usbData.Length = actualLen;
 
     if (xQueueSendFromISR(usbMessageQueueHandle, &usbData, &xHigherPriorityTaskWoken) != pdPASS) {
-        printf("Queue full\r\n");
+        printf("usb_queue full\r\n");
     }
 
     if (xHigherPriorityTaskWoken == pdTRUE) {

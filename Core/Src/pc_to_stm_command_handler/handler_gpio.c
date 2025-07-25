@@ -101,7 +101,7 @@ HAL_StatusTypeDef Handler_GPIO_SetOutput(uint8_t gpio_index, uint8_t pull_mode) 
     }
     HAL_GPIO_Init(gpio_map[gpio_index].port, &GPIO_InitStruct);
 
-    printf("--GPIO set GPIO_MODE_OUTPUT_PP: index=%d, pin=0x%04X, pull_mode=%d\r\n", gpio_index, gpio_map[gpio_index].pin, pull_mode);
+    // printf("--GPIO set GPIO_MODE_OUTPUT_PP: index=%d, pin=0x%04X, pull_mode=%d\r\n", gpio_index, gpio_map[gpio_index].pin, pull_mode);
     return HAL_OK;
 }
 
@@ -132,7 +132,7 @@ HAL_StatusTypeDef Handler_GPIO_SetOpenDrain(uint8_t gpio_index, uint8_t pull_mod
     }
     HAL_GPIO_Init(gpio_map[gpio_index].port, &GPIO_InitStruct);
 
-    printf("--GPIO set GPIO_MODE_OUTPUT_OD: index=%d, pin=0x%04X, pull_mode=%d\r\n", gpio_index, gpio_map[gpio_index].pin, pull_mode);
+    // printf("--GPIO set GPIO_MODE_OUTPUT_OD: index=%d, pin=0x%04X, pull_mode=%d\r\n", gpio_index, gpio_map[gpio_index].pin, pull_mode);
     return HAL_OK;
 }
 
@@ -146,7 +146,7 @@ HAL_StatusTypeDef Handler_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
     }
     GPIO_PinState pin_state = (write_value & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET;
     HAL_GPIO_WritePin(gpio_map[gpio_index].port, gpio_map[gpio_index].pin, pin_state);
-    printf("---GPIO write: index=%d, pin=0x%04X, value=0x%02X, state=%d\r\n", gpio_index, gpio_map[gpio_index].pin, write_value, pin_state);
+    // printf("---GPIO write: index=%d, pin=0x%04X, value=0x%02X, state=%d\r\n", gpio_index, gpio_map[gpio_index].pin, write_value, pin_state);
     return HAL_OK;
 }
 

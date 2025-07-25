@@ -18,6 +18,7 @@ target_include_directories(stm32cubemx INTERFACE
     ../../Core/Inc/config
     ../../Core/Inc/pc_to_stm_command_handler
     ../../Core/Inc/Font_library
+    ../../Core/Inc/tasks
     ../../USB_DEVICE/App
     ../../USB_DEVICE/Target
     ../../Drivers/STM32H7xx_HAL_Driver/Inc
@@ -43,6 +44,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Core/Src/init/gd25qxx.c
     ../../Core/Src/init/qspi_init.c
     ../../Core/Src/tasks/debug_task.c
+    ../../Core/Src/tasks/image_queue_task.c
     ../../Core/Src/Font_library/fonts.c
     ../../Core/Src/config/freertos.c
     ../../Core/Src/config/stm32h7xx_it.c

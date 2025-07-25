@@ -177,7 +177,13 @@ SECTIONS
     . = ALIGN(8);
   } >DTCMRAM
 
-  
+  /* Custom section for large image buffers in main RAM */
+  .ram_buffers :
+  {
+    . = ALIGN(4);
+    *(.ram_buffers)    /* Large buffers go to 512KB RAM */
+    . = ALIGN(4);
+  } >RAM
 
   /* Remove information from the standard libraries */
   /DISCARD/ :

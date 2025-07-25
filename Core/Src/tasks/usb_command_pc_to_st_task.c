@@ -23,7 +23,7 @@ void usb_command_pc_to_st_task(void *argument)
     accumulated_length = 0;
     packet_complete = 0;
     memset(big_buffer, 0, BIG_BUFFER_SIZE);
-    usbMessageQueueHandle = xQueueCreate(60, sizeof(USB_Data_TypeDef));
+    usbMessageQueueHandle = xQueueCreate(100, sizeof(USB_Data_TypeDef));
     if (usbMessageQueueHandle == NULL) {
         printf("Queue create failed!\r\n");
         vTaskDelete(NULL);

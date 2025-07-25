@@ -7,6 +7,7 @@
 #include "handler_gpio.h" 
 #include "pc_to_stm_command_handler/handler_reset_usb3300_stm32.h" 
 #include "usbd_cdc_if.h"
+#include "tasks/image_queue_task.h"
 
 int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len) {
     PARAM_HEADER header;
@@ -134,29 +135,38 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
 
 
 static void Process_SPI_Write(uint8_t spi_index, uint8_t* data, uint16_t data_len) {
-
     HAL_StatusTypeDef status = Handler_SPI_Transmit(spi_index, data, NULL, data_len, 1000);
-
 }
 
 static void Process_SPI_Queue_start(uint8_t spi_index) {
-
+    // 启动图像队列处理
+    HAL_StatusTypeDef status = ImageQueue_Start();
     
-
+    // if (status == HAL_OK) {
+    //     printf("SPI Queue started successfully for index: %d\r\n", spi_index);
+    // } else {
+    //     printf("Failed to start SPI Queue for index: %d, error: %d\r\n", spi_index, status);
+    // }
 }
 
 
 static void Process_SPI_Queue_stop(uint8_t spi_index) {
-     
-
+    // 停止图像队列处理
+    HAL_StatusTypeDef status = ImageQueue_Stop();
+    
+    // if (status == HAL_OK) {
+    //     printf("SPI Queue stopped successfully for index: %d\r\n", spi_index);
+    // } else {
+    //     printf("Failed to stop SPI Queue for index: %d, error: %d\r\n", spi_index, status);
+    // }
 }
 
 static void Process_SPI_Queue_Status(uint8_t spi_index) {
+    // 获取实际的队列状态
+    uint8_t queue_count = ImageQueue_GetStatus();
+
+    // printf("SPI Queue status: %d\r\n", queue_count);
     
-    extern uint8_t Frame_Queue_Count(void);
-    uint8_t queue_count = 3;
-    
-    printf("SPI Queue Status Query: Index=%d, Count=%d\r\n", spi_index, queue_count);
     
     // 定义队列状态响应数据包
     typedef struct {
@@ -168,7 +178,7 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
     
     // 设置协议头
     response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
-    response.header.cmd_id = CMD_QUEUE_STATUS;           // 队列状态命令
+    response.header.cmd_id = CMD_READ;           // 队列状态命令
     response.header.device_index = spi_index;            // 使用传入的索引
     response.header.param_count = 0;                     // 无参数
     response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
@@ -177,7 +187,6 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
     response.queue_status = queue_count;
     
     uint8_t ret = CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
-    printf("Queue status sent, ret: %u, count: %d\r\n", ret, queue_count);
 }
 
 
@@ -222,22 +231,45 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         }
                         break;
                     }
-                    case CMD_WRITE: {
+                    case CMD_QUEUE_WRITE: {
                         if (header->data_len > 0) {
                             int data_pos = sizeof(GENERIC_CMD_HEADER);
-                            
                             for (int i = 0; i < header->param_count; i++) {
                                 PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
                                 data_pos += sizeof(PARAM_HEADER) + param_header->param_len;
                             }
                             uint8_t* write_data = Buf + data_pos;
-                            Process_SPI_Write(header->device_index, write_data, header->data_len);
+
+
+                            ImageQueue_AddFrame(write_data, header->data_len);  
                         } else {
 
                             printf("Error: No data for SPI_WRITE command\r\n");
                         }
                         break;
                     }
+
+                    case CMD_WRITE: {
+                        if (header->data_len > 0) {
+                            int data_pos = sizeof(GENERIC_CMD_HEADER);
+                            for (int i = 0; i < header->param_count; i++) {
+                                PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
+                                data_pos += sizeof(PARAM_HEADER) + param_header->param_len;
+                            }
+                            uint8_t* write_data = Buf + data_pos;
+
+                            Process_SPI_Write(header->device_index, write_data, header->data_len);
+
+                            
+                        } else {
+
+                            printf("Error: No data for SPI_WRITE command\r\n");
+                        }
+                        break;
+                    }
+
+
+
                     case CMD_QUEUE_STATUS: {
                         Process_SPI_Queue_Status(header->device_index);
                         break;

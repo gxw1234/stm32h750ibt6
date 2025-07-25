@@ -28,6 +28,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include "tasks/image_queue_task.h"
 #include <stdio.h>
 #include "FreeRTOS.h"
 #include "task.h"
@@ -162,6 +163,9 @@ int main(void)
 
 
 
+  /* 初始化图像队列系统 */
+  ImageQueue_Init();
+  
   /* 创建USB命令处理任务 */
   /* USER CODE END 2 */
 
@@ -200,8 +204,8 @@ int main(void)
   /*创建MP8865线程 */
   xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
-  // /*创建USB发送测试线程 */
-  xTaskCreate(USB_Send_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
+  // /*摄像头IIC中断线程 */
+  xTaskCreate(IIC_interruption_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 2, &UsbSendTaskHandle);
 
 
   /*创建USB命令处理线程 */

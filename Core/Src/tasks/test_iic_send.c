@@ -6,7 +6,7 @@
 #include "main.h"
 #include <stdio.h>
 
-/* 用于IIC从机模式的全局变量 */
+
 struct rx_tx {
   uint8_t rx;
   uint8_t tx;
@@ -30,18 +30,6 @@ I2C_HandleTypeDef hi2c3_test_;
 
 #define DATA_SIZE 64
 static uint8_t myData[DATA_SIZE];
-
-/**
- * @brief Initialize USB send test task
- */
-void USB_Send_Task_Init(void)
-{
-    for(uint16_t i = 0; i < DATA_SIZE; i++)
-    {
-        myData[i] = (uint8_t)i;
-    }
-}
-
 
 
 /**
@@ -84,13 +72,13 @@ HAL_StatusTypeDef Test_I2C3_Slave_Init(void)
  * @brief USB send test task
  * @param argument Not used
  */
-void USB_Send_Task(void *argument)
+void IIC_interruption_Task(void *argument)
 {
     HAL_StatusTypeDef status = HAL_ERROR;
     /* Prevent compiler warning for unused argument */
     (void)argument;
     // vTaskDelay(pdMS_TO_TICKS(1000));
-    // USB_Send_Task_Init();
+
     printf("--------1111111111-----\r\n");
     if (Test_I2C3_Slave_Init() == HAL_OK) {
         printf("I2C3 slave mode init success, address: 0x%02X\r\n", 0x6e);
@@ -115,27 +103,21 @@ void USB_Send_Task(void *argument)
     }
 }
 
-/**
- * @brief I2C slave transmission complete callback function
- */
+
 void HAL_I2C_SlaveTxCpltCallback(I2C_HandleTypeDef *I2cHandle) {
     Xfer_Complete = 1;
     HAL_I2C_Slave_Seq_Transmit_IT(&hi2c3_test_, (uint8_t *)&aTxBuffer[1], 1, I2C_NEXT_FRAME);
     // printf("I2C slave TX complete callback\r\n");
 }
 
-/**
- * @brief I2C slave reception complete callback function
- */
+
 void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *I2cHandle) {
     Xfer_Complete = 1;
     HAL_I2C_Slave_Seq_Receive_IT(&hi2c3_test_, &aRxBuffer[1], 1, I2C_NEXT_FRAME);
     // printf("I2C slave RX complete callback, received: 0x%02X\r\n", aRxBuffer[0]);
 }
 
-/**
- * @brief I2C address match callback function
- */
+
 void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, uint16_t AddrMatchCode) {
     Transfer_Direction = TransferDirection;
     
@@ -163,9 +145,7 @@ void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, ui
     }
 }
 
-/**
- * @brief I2C listen complete callback function
- */
+
 void HAL_I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c) {
     // printf("I2C listen complete callback\r\n");
 }

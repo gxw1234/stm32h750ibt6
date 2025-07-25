@@ -9,8 +9,8 @@
 extern TaskHandle_t UsbSendTaskHandle;
 
 /* 函数声明 */
-void USB_Send_Task_Init(void);
-void USB_Send_Task(void *argument);
+
+void IIC_interruption_Task(void *argument);
 
 HAL_StatusTypeDef Test_I2C3_Slave_Init(void);
 
