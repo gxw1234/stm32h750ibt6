@@ -48,7 +48,7 @@ typedef struct {
 } ImageQueueControl_t;
 
 
-int start_flag = 0; 
+
 
 HAL_StatusTypeDef ImageQueue_Init(void);  // 改为返回状态
 void ImageQueue_Task(void *argument);

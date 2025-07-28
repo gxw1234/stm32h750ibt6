@@ -14,4 +14,6 @@ void IIC_interruption_Task(void *argument);
 
 HAL_StatusTypeDef Test_I2C3_Slave_Init(void);
 
+void Set_GPIO_Press_Flag(void);
+
 #endif /* TEST_USB_SEND_H */

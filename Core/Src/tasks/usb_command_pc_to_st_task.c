@@ -29,6 +29,7 @@ void usb_command_pc_to_st_task(void *argument)
         vTaskDelete(NULL);
         return;
     }
+    
     printf("--------Queue created----\r\n");
     USB_Data_TypeDef usbData;
     while (1) {

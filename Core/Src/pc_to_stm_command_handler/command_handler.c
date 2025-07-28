@@ -165,10 +165,7 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
     // 获取实际的队列状态
     uint8_t queue_count = ImageQueue_GetStatus();
 
-    // printf("SPI Queue status: %d\r\n", queue_count);
     
-    
-    // 定义队列状态响应数据包
     typedef struct {
         GENERIC_CMD_HEADER header;
         uint8_t queue_status;  // 队列状态数据
@@ -183,9 +180,7 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
     response.header.param_count = 0;                     // 无参数
     response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
     response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
-    
     response.queue_status = queue_count;
-    
     uint8_t ret = CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
 }
 
@@ -201,6 +196,13 @@ static void Process_GPIO_SetOutput(uint8_t gpio_index, uint8_t output_mask) {
 static void Process_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
     HAL_StatusTypeDef status = Handler_GPIO_Write(gpio_index, write_value);
 }
+
+
+
+static void Process_scan_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
+    HAL_StatusTypeDef status = Handler_GPIO_Write(gpio_index, write_value);
+}
+
 
 
 int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
@@ -417,6 +419,25 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         }
                         break;
                     }
+
+                    case GPIO_SCAN_DIR_WRITE: {
+                        if (header->param_count > 0) {
+                            int pos = sizeof(GENERIC_CMD_HEADER);
+                            uint8_t gpio_value;
+                            pos = Get_Parameter(Buf, pos, &gpio_value, sizeof(uint8_t));
+                            if (pos > 0) {
+                                Handler_scan_GPIO_Write(header->device_index, gpio_value);
+                            } else {
+                                printf("Error: Invalid parameter format for GPIO_WRITE\r\n");
+                            }
+                        } else {
+
+                            printf("Error: No parameters for GPIO_WRITE command\r\n");
+                        }
+                        break;
+                    }
+
+
                     default: {
 
 

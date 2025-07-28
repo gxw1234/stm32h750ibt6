@@ -5,7 +5,7 @@
 #include "cmsis_os.h"
 #include "main.h"
 #include <stdio.h>
-
+#include "pc_to_stm_command_handler/command_handler.h"
 
 struct rx_tx {
   uint8_t rx;
@@ -19,7 +19,7 @@ struct rx_tx rx_tx_data[] = {
   {0xfd, 0x01},
   {0x18, 48},
   {0x1a, 120},
-  {0x09, 1},
+  {0x09, 0x01},
 };
 
 /* Data buffer */
@@ -31,6 +31,9 @@ I2C_HandleTypeDef hi2c3_test_;
 
 #define DATA_SIZE 64
 static uint8_t myData[DATA_SIZE];
+
+// GPIO下压标志位
+static uint8_t gpio_pressed_flag = 0;
 
 
 /**
@@ -127,7 +130,30 @@ void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, ui
             if (aRxBuffer[0] == rx_tx_data[i].rx) {
                 aTxBuffer[0] = rx_tx_data[i].tx;
                 if (aRxBuffer[0] == 0x09) {
-                    printf(" 0x09---, : 0x%02X\r\n", aTxBuffer[0]);
+                    if (gpio_pressed_flag) {
+                        printf("Y");
+                        // typedef struct {
+                        //     GENERIC_CMD_HEADER header;
+                        //     uint8_t queue_status;  // 队列状态数据
+                        // } Queue_Status_Response;
+                        
+                        // Queue_Status_Response response;
+                        
+                        // // 设置协议头
+                        // response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
+                        // response.header.cmd_id = CMD_READ;           // 队列状态命令
+                        // response.header.device_index = 1;            // 使用传入的索引
+                        // response.header.param_count = 0;                     // 无参数
+                        // response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
+                        // response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
+                        // response.queue_status = 1;
+                        // CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+
+
+                        gpio_pressed_flag = 0; // 复位标志位
+                    } else {
+                        printf("N");
+                    }
                 }
             }
         }
@@ -151,5 +177,10 @@ void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, ui
 
 void HAL_I2C_ListenCpltCallback(I2C_HandleTypeDef *hi2c) {
     // printf("I2C listen complete callback\r\n");
+}
+
+
+void Set_GPIO_Press_Flag(void) {
+    gpio_pressed_flag = 1;
 }
 

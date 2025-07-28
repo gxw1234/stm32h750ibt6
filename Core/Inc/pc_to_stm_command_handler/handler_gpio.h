@@ -24,7 +24,7 @@ HAL_StatusTypeDef Handler_GPIO_SetOpenDrain(uint8_t gpio_index, uint8_t pull_mod
 HAL_StatusTypeDef Handler_GPIO_Write(uint8_t gpio_index, uint8_t write_value);
 
 //扫描模式入GPIO写入
-HAL_StatusTypeDef Handler_GPIO_Write(uint8_t gpio_index, uint8_t write_value);
+HAL_StatusTypeDef Handler_scan_GPIO_Write(uint8_t gpio_index, uint8_t write_value);
 
 
 

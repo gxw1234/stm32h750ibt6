@@ -8,6 +8,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "tasks/test_iic_send.h"
 
 typedef struct {
     GPIO_TypeDef* port;
@@ -131,7 +132,6 @@ HAL_StatusTypeDef Handler_GPIO_SetOpenDrain(uint8_t gpio_index, uint8_t pull_mod
             break;
     }
     HAL_GPIO_Init(gpio_map[gpio_index].port, &GPIO_InitStruct);
-
     // printf("--GPIO set GPIO_MODE_OUTPUT_OD: index=%d, pin=0x%04X, pull_mode=%d\r\n", gpio_index, gpio_map[gpio_index].pin, pull_mode);
     return HAL_OK;
 }
@@ -157,9 +157,19 @@ HAL_StatusTypeDef Handler_scan_GPIO_Write(uint8_t gpio_index, uint8_t write_valu
     }
     GPIO_PinState pin_state = (write_value & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET;
     HAL_GPIO_WritePin(gpio_map[gpio_index].port, gpio_map[gpio_index].pin, pin_state);
-    // printf("---GPIO write: index=%d, pin=0x%04X, value=0x%02X, state=%d\r\n", gpio_index, gpio_map[gpio_index].pin, write_value, pin_state);
+    
+    // 如果是下压操作（写入0），设置标志位
+    if (write_value == 0) {
+        Set_GPIO_Press_Flag();
+    }
+
+    
+    
+    // printf("Handler_scan_GPIO_Write: index=%d, pin=0x%04X, value=0x%02X, state=%d\r\n", gpio_index, gpio_map[gpio_index].pin, write_value, pin_state);
     return HAL_OK;
 }
+
+
 
 
 

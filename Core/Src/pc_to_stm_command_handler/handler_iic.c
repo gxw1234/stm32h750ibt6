@@ -2,6 +2,9 @@
 #include "main.h"
 #include <stdio.h>
 
+#include "usbd_cdc_if.h"
+
+
 // 声明I2C句柄
 // static I2C_HandleTypeDef hi2c3;
 I2C_HandleTypeDef hi2c3_test;

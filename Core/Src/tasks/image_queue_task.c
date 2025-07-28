@@ -147,7 +147,6 @@ HAL_StatusTypeDef ImageQueue_Start(void)
         // 设置为运行状态
         g_imageQueueControl.state = QUEUE_RUNNING;
         xSemaphoreGive(g_imageQueueControl.queueMutex);
-        printf("Image queue started\r\n");
         return HAL_OK;
     }
     return HAL_ERROR;
