@@ -38,7 +38,7 @@
 #define GPIO_DIR_OUTPUT_OD  0x02    // 输出开漏
 #define GPIO_DIR_INPUT   0x00    // 输入模式
 #define GPIO_DIR_WRITE   0x03    // 写入
-
+#define GPIO_SCAN_DIR_WRITE   0x04    // 扫描写入
 
 
 // 电源命令ID定义
@@ -53,7 +53,7 @@
 #define POWER_CHANNEL_MA        0x03  // 毫安电流通道
 
 
-#define CMD_END_MARKER 0xA5A5A5A5  // 命令结束标记符
+
 
 // 通用命令包头结构
 typedef struct _GENERIC_CMD_HEADER {
@@ -96,5 +96,15 @@ int Get_Parameter(uint8_t* buffer, int pos, void* data, uint16_t max_len);
 
 
 int8_t Process_Command(uint8_t* Buf, uint32_t *Len);
+
+
+static void Process_GPIO_Write(uint8_t gpio_index, uint8_t write_value);
+
+static void Process_scan_GPIO_Write(uint8_t gpio_index, uint8_t write_value);
+
+
+
+
+
 
 #endif /* COMMAND_HANDLER_H */

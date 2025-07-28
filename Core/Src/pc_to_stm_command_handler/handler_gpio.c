@@ -150,6 +150,21 @@ HAL_StatusTypeDef Handler_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
     return HAL_OK;
 }
 
+//@param pull_mode 上拉下拉模式：0=无上拉下拉，1=上拉，2=下拉
+HAL_StatusTypeDef Handler_scan_GPIO_Write(uint8_t gpio_index, uint8_t write_value) {
+    if (gpio_index >= sizeof(gpio_map)/sizeof(gpio_map[0]) || gpio_map[gpio_index].port == NULL) {
+        return HAL_ERROR;
+    }
+    GPIO_PinState pin_state = (write_value & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+    HAL_GPIO_WritePin(gpio_map[gpio_index].port, gpio_map[gpio_index].pin, pin_state);
+    // printf("---GPIO write: index=%d, pin=0x%04X, value=0x%02X, state=%d\r\n", gpio_index, gpio_map[gpio_index].pin, write_value, pin_state);
+    return HAL_OK;
+}
+
+
+
+
+
 HAL_StatusTypeDef Handler_GPIO_SetInput(uint8_t gpio_index, uint8_t pull_mode) {
     if (gpio_index >= sizeof(gpio_map)/sizeof(gpio_map[0]) || gpio_map[gpio_index].port == NULL) {
         return HAL_ERROR;

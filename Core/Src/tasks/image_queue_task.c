@@ -144,7 +144,6 @@ HAL_StatusTypeDef ImageQueue_Start(void)
             g_imageBuffers[i].valid = 0;
             g_imageBuffers[i].size = 0;
         }
-        
         // 设置为运行状态
         g_imageQueueControl.state = QUEUE_RUNNING;
         xSemaphoreGive(g_imageQueueControl.queueMutex);

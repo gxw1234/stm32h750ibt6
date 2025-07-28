@@ -19,6 +19,7 @@ struct rx_tx rx_tx_data[] = {
   {0xfd, 0x01},
   {0x18, 48},
   {0x1a, 120},
+  {0x09, 1},
 };
 
 /* Data buffer */
@@ -79,7 +80,6 @@ void IIC_interruption_Task(void *argument)
     (void)argument;
     // vTaskDelay(pdMS_TO_TICKS(1000));
 
-    printf("--------1111111111-----\r\n");
     if (Test_I2C3_Slave_Init() == HAL_OK) {
         printf("I2C3 slave mode init success, address: 0x%02X\r\n", 0x6e);
         status = HAL_I2C_EnableListen_IT(&hi2c3_test_);
@@ -126,6 +126,9 @@ void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, ui
         for (int i = 0; i < sizeof(rx_tx_data) / sizeof(rx_tx_data[0]); i++) {
             if (aRxBuffer[0] == rx_tx_data[i].rx) {
                 aTxBuffer[0] = rx_tx_data[i].tx;
+                if (aRxBuffer[0] == 0x09) {
+                    printf(" 0x09---, : 0x%02X\r\n", aTxBuffer[0]);
+                }
             }
         }
         

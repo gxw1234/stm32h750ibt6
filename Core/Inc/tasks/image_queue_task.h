@@ -47,7 +47,9 @@ typedef struct {
     uint32_t droppedFrames;         // 丢弃的帧数
 } ImageQueueControl_t;
 
-// 全局函数声明
+
+int start_flag = 0; 
+
 HAL_StatusTypeDef ImageQueue_Init(void);  // 改为返回状态
 void ImageQueue_Task(void *argument);
 HAL_StatusTypeDef ImageQueue_AddFrame(uint8_t* imageData, uint16_t size);
@@ -55,6 +57,7 @@ uint8_t ImageQueue_GetStatus(void);
 HAL_StatusTypeDef ImageQueue_Start(void);
 HAL_StatusTypeDef ImageQueue_Stop(void);
 uint32_t ImageQueue_GetCount(void);
-HAL_StatusTypeDef ImageQueue_DeInit(void);  // 清理系统资源
+HAL_StatusTypeDef ImageQueue_DeInit(void);  
+
 
 #endif /* IMAGE_QUEUE_TASK_H */ 
