@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 
-// 协议类型定义
+// ------------协议类型定义
 #define PROTOCOL_SPI        0x01    // SPI协议
 #define PROTOCOL_IIC        0x02    // IIC协议
 #define PROTOCOL_UART       0x03    // UART协议
@@ -14,7 +14,7 @@
 #define PROTOCOL_POWER      0x05    // 电源协议
 #define PROTOCOL_RESETSTM32      0x06    // 复位STM32
 
-// 通用命令ID定义
+// ---------通用命令ID定义
 #define CMD_INIT            0x01    // 初始化命令
 #define CMD_WRITE           0x02    // 写数据命令
 #define CMD_READ            0x03    // 读数据命令
@@ -27,11 +27,9 @@
 #define CMD_QUEUE_START    0x06    // 队列状态查询命令    
 #define CMD_QUEUE_STOP    0x07    // 队列状态查询命令
 #define CMD_QUEUE_WRITE           0x08    // 写数据命令
-
-//----结束符------------
+//----帧头和结束符------------
+#define FRAME_START_MARKER  0x5AA55AA5 // 帧开始标记
 #define CMD_END_MARKER      0xA5A5A5A5 // 命令包结束符
-
-
 
 //---------------GPIO------------------
 #define GPIO_DIR_OUTPUT  0x01    // 输出模式
@@ -40,16 +38,13 @@
 #define GPIO_DIR_WRITE   0x03    // 写入
 #define GPIO_SCAN_DIR_WRITE   0x04    // 扫描写入
 //---------------GPIO------------------
-
 #define GPIO_SCAN_MODE_WRITE   0x04    // 扫描写入
-
-// 电源命令ID定义
+// ----------电源命令ID定义
 #define POWER_CMD_SET_VOLTAGE       0x01  // 设置电压命令
 #define POWER_CMD_START_CURRENT_READING 0x02  // 开始读取电流命令
 #define POWER_CMD_STOP_CURRENT_READING  0x03  // 停止读取电流命令
 #define POWER_CMD_READ_CURRENT_DATA     0x04  // 读取电流数据命令
-
-// 电源通道定义
+// ------------电源通道定义
 #define POWER_CHANNEL_1         0x01  // 电源通道1
 #define POWER_CHANNEL_UA        0x02  // 微安电流通道
 #define POWER_CHANNEL_MA        0x03  // 毫安电流通道
@@ -59,13 +54,14 @@
 
 // 通用命令包头结构
 typedef struct _GENERIC_CMD_HEADER {
+  uint32_t start_marker;  // 帧开始标记 0x5AA55AA5
   uint8_t protocol_type;  // 协议类型：SPI/IIC/UART等
   uint8_t cmd_id;         // 命令ID：初始化/读/写等
   uint8_t device_index;   // 设备索引
   uint8_t param_count;    // 参数数量
   uint16_t data_len;      // 数据部分长度
   uint16_t total_packets; // 整个数据包的总大小，包括头部和数据
-} GENERIC_CMD_HEADER, *PGENERIC_CMD_HEADER;
+} __attribute__((packed)) GENERIC_CMD_HEADER, *PGENERIC_CMD_HEADER;
 
 // 简化的参数头结构
 typedef struct _PARAM_HEADER {

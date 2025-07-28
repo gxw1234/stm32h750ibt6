@@ -118,15 +118,21 @@ static int Process_Power_ReadCurrentData(uint8_t channel, uint8_t* response_buf,
     int response_len = 0;
     
 
-    if (max_len >= sizeof(GENERIC_CMD_HEADER) + sizeof(float)) {
+    int total_len = sizeof(GENERIC_CMD_HEADER) + sizeof(float) + sizeof(uint32_t);
+    if (max_len >= total_len) {
         GENERIC_CMD_HEADER* response_header = (GENERIC_CMD_HEADER*)response_buf;
+        response_header->start_marker = FRAME_START_MARKER;
         response_header->protocol_type = PROTOCOL_POWER;
         response_header->cmd_id = POWER_CMD_READ_CURRENT_DATA;
         response_header->device_index = channel;
         response_header->param_count = 0;
-        response_header->data_len = sizeof(float); 
+        response_header->data_len = sizeof(float);
+        response_header->total_packets = total_len;
+        
         memcpy(response_buf + sizeof(GENERIC_CMD_HEADER), &current_value, sizeof(float));
-        response_len = sizeof(GENERIC_CMD_HEADER) + sizeof(float);
+        uint32_t end_marker = CMD_END_MARKER;
+        memcpy(response_buf + sizeof(GENERIC_CMD_HEADER) + sizeof(float), &end_marker, sizeof(uint32_t));
+        response_len = total_len;
         printf("Current data: %.3f\r\n", current_value);
     }
     
@@ -174,14 +180,25 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
     Queue_Status_Response response;
     
     // 设置协议头
+    response.header.start_marker = FRAME_START_MARKER;   // 帧开始标记
     response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
-    response.header.cmd_id = CMD_READ;           // 队列状态命令
+    response.header.cmd_id = CMD_READ;                   // 队列状态命令
     response.header.device_index = spi_index;            // 使用传入的索引
     response.header.param_count = 0;                     // 无参数
     response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
-    response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
+    response.header.total_packets = sizeof(Queue_Status_Response) + sizeof(uint32_t);  // 总包大小(包含结束符)
     response.queue_status = queue_count;
-    uint8_t ret = CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+    
+    // 计算总长度并分配缓冲区
+    int total_len = sizeof(Queue_Status_Response) + sizeof(uint32_t);
+    unsigned char* send_buffer = (unsigned char*)malloc(total_len);
+    if (send_buffer) {
+        memcpy(send_buffer, &response, sizeof(Queue_Status_Response));
+        uint32_t end_marker = CMD_END_MARKER;
+        memcpy(send_buffer + sizeof(Queue_Status_Response), &end_marker, sizeof(uint32_t));
+        uint8_t ret = CDC_Transmit_HS(send_buffer, total_len);
+        free(send_buffer);
+    }
 }
 
 
@@ -274,15 +291,26 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         Queue_Write_Response response;
                         
                         // 设置协议头
+                        response.header.start_marker = FRAME_START_MARKER;
                         response.header.protocol_type = PROTOCOL_SPI;
                         response.header.cmd_id = CMD_QUEUE_WRITE;
                         response.header.device_index = header->device_index;
                         response.header.param_count = 0;
                         response.header.data_len = sizeof(uint8_t);
-                        response.header.total_packets = sizeof(Queue_Write_Response);
+                        response.header.total_packets = sizeof(Queue_Write_Response) + sizeof(uint32_t);
                         response.status = status;
                         
-                        CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+
+                        // 计算总长度并分配缓冲区
+                        int total_len = sizeof(Queue_Write_Response) + sizeof(uint32_t);
+                        unsigned char* send_buffer = (unsigned char*)malloc(total_len);
+                        if (send_buffer) {
+                            memcpy(send_buffer, &response, sizeof(Queue_Write_Response));
+                            uint32_t end_marker = CMD_END_MARKER;
+                            memcpy(send_buffer + sizeof(Queue_Write_Response), &end_marker, sizeof(uint32_t));
+                            CDC_Transmit_HS(send_buffer, total_len);
+                            free(send_buffer);
+                        }
                         break;
                     }
 

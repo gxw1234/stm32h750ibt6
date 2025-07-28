@@ -114,16 +114,28 @@ void IIC_interruption_Task(void *argument)
             } Scan_gpio_Response;
             
             Scan_gpio_Response response;
+            response.header.start_marker = FRAME_START_MARKER;
             response.header.protocol_type = PROTOCOL_SPI;
             response.header.cmd_id = GPIO_SCAN_MODE_WRITE;
             response.header.device_index = 1;
             response.header.param_count = 0;
             response.header.data_len = sizeof(uint8_t);
-            response.header.total_packets = sizeof(Scan_gpio_Response);
+            response.header.total_packets = sizeof(Scan_gpio_Response) + sizeof(uint32_t);
             response.status = 1;
-            CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+            
+            // 计算总长度并分配缓冲区
+            int total_len = sizeof(Scan_gpio_Response) + sizeof(uint32_t);
+            unsigned char* send_buffer = (unsigned char*)malloc(total_len);
+            if (send_buffer) {
+                memcpy(send_buffer, &response, sizeof(Scan_gpio_Response));
+                uint32_t end_marker = CMD_END_MARKER;
+                memcpy(send_buffer + sizeof(Scan_gpio_Response), &end_marker, sizeof(uint32_t));
+                CDC_Transmit_HS(send_buffer, total_len);
+                free(send_buffer);
+            }
 
             usb_send_flag = 0; // 复位标志位
+            printf("--y--");
         }
         
         vTaskDelay(pdMS_TO_TICKS(5));

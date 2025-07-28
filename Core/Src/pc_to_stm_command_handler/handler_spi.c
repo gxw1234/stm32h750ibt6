@@ -147,14 +147,25 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
 {
     if (hspi == &hspi5) {
         SPI_Data_Packet packet;
+        packet.header.start_marker = FRAME_START_MARKER;
         packet.header.protocol_type = PROTOCOL_SPI;    // SPI协议
         packet.header.cmd_id = CMD_READ;              // 读数据命令
         packet.header.device_index = SPI_INDEX_1;     // SPI设备索引
         packet.header.param_count = 0;                // 无参数
         packet.header.data_len = SPI_RX_BUFFER_SIZE;  // 数据长度
-        packet.header.total_packets = sizeof(SPI_Data_Packet); // 总包大小
+        packet.header.total_packets = sizeof(SPI_Data_Packet) + sizeof(uint32_t); // 总包大小(包含结束符)
         memcpy(packet.data, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
-        CDC_Transmit_HS((uint8_t*)&packet, sizeof(packet));
+        
+        // 计算总长度并分配缓冲区
+        int total_len = sizeof(SPI_Data_Packet) + sizeof(uint32_t);
+        unsigned char* send_buffer = (unsigned char*)malloc(total_len);
+        if (send_buffer) {
+            memcpy(send_buffer, &packet, sizeof(SPI_Data_Packet));
+            uint32_t end_marker = CMD_END_MARKER;
+            memcpy(send_buffer + sizeof(SPI_Data_Packet), &end_marker, sizeof(uint32_t));
+            CDC_Transmit_HS(send_buffer, total_len);
+            free(send_buffer);
+        }
         HAL_SPI_Receive_IT(&hspi5, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
     }
 }
