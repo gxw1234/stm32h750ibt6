@@ -34,6 +34,8 @@ static uint8_t myData[DATA_SIZE];
 
 // GPIO下压标志位
 static uint8_t gpio_pressed_flag = 0;
+// USB发送标志位
+static uint8_t usb_send_flag = 0;
 
 
 /**
@@ -101,8 +103,30 @@ void IIC_interruption_Task(void *argument)
             while (HAL_I2C_GetState(&hi2c3_test_) != HAL_I2C_STATE_READY){}
             HAL_I2C_EnableListen_IT(&hi2c3_test_);
             Xfer_Complete = 0;
-
         }
+        
+
+        if (usb_send_flag == 1) {
+           
+            typedef struct {
+                GENERIC_CMD_HEADER header;
+                uint8_t status;  // 状态数据
+            } Scan_gpio_Response;
+            
+            Scan_gpio_Response response;
+            response.header.protocol_type = PROTOCOL_SPI;
+            response.header.cmd_id = GPIO_SCAN_MODE_WRITE;
+            response.header.device_index = 1;
+            response.header.param_count = 0;
+            response.header.data_len = sizeof(uint8_t);
+            response.header.total_packets = sizeof(Scan_gpio_Response);
+            response.status = 1;
+            CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+
+            usb_send_flag = 0; // 复位标志位
+        }
+        
+        vTaskDelay(pdMS_TO_TICKS(5));
     }
 }
 
@@ -131,26 +155,8 @@ void HAL_I2C_AddrCallback(I2C_HandleTypeDef *hi2c, uint8_t TransferDirection, ui
                 aTxBuffer[0] = rx_tx_data[i].tx;
                 if (aRxBuffer[0] == 0x09) {
                     if (gpio_pressed_flag) {
-                        printf("Y");
-                        // typedef struct {
-                        //     GENERIC_CMD_HEADER header;
-                        //     uint8_t queue_status;  // 队列状态数据
-                        // } Queue_Status_Response;
-                        
-                        // Queue_Status_Response response;
-                        
-                        // // 设置协议头
-                        // response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
-                        // response.header.cmd_id = CMD_READ;           // 队列状态命令
-                        // response.header.device_index = 1;            // 使用传入的索引
-                        // response.header.param_count = 0;                     // 无参数
-                        // response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
-                        // response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
-                        // response.queue_status = 1;
-                        // CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
-
-
-                        gpio_pressed_flag = 0; // 复位标志位
+                        usb_send_flag = 1;
+                        gpio_pressed_flag = 0; 
                     } else {
                         printf("N");
                     }

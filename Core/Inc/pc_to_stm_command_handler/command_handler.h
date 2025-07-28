@@ -39,7 +39,9 @@
 #define GPIO_DIR_INPUT   0x00    // 输入模式
 #define GPIO_DIR_WRITE   0x03    // 写入
 #define GPIO_SCAN_DIR_WRITE   0x04    // 扫描写入
+//---------------GPIO------------------
 
+#define GPIO_SCAN_MODE_WRITE   0x04    // 扫描写入
 
 // 电源命令ID定义
 #define POWER_CMD_SET_VOLTAGE       0x01  // 设置电压命令
