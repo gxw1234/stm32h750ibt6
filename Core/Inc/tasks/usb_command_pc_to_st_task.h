@@ -27,5 +27,5 @@ extern volatile uint8_t usb_rx_flag;
 extern QueueHandle_t usbMessageQueueHandle;
 
 void usb_command_pc_to_st_task(void *argument);
-
+static void send_queue_write_response(uint8_t status);
 #endif /* __USB_COMMAND_PC_TO_ST_TASK_H */

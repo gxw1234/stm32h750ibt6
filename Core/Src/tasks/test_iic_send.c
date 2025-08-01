@@ -126,7 +126,7 @@ void IIC_interruption_Task(void *argument)
             usb_send_flag = 0; // 复位标志位
         }
         
-        vTaskDelay(pdMS_TO_TICKS(5));
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 

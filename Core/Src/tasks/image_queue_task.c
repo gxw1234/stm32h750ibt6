@@ -19,34 +19,20 @@ static TaskHandle_t g_imageQueueTaskHandle = NULL;
  */
 void ImageQueue_Task(void *argument)
 {
+
+    
     (void)argument; 
     QueueItem_t queueItem;  // 只有3字节，安全
+    static TickType_t lastFrameStartTime = 0;  // 记录上一帧开始时间
+    const TickType_t frameInterval = pdMS_TO_TICKS(4);  // 4ms帧间隔
     
     for (;;) {
         // 从队列中接收缓冲区索引
         if (xQueueReceive(g_imageQueueControl.imageQueue, &queueItem, portMAX_DELAY) == pdTRUE) {
-            
             // 获取对应的静态缓冲区
             StaticImageFrame_t* frame = &g_imageBuffers[queueItem.bufferIndex];
-            
-            // 检查队列状态和数据有效性
-            if (g_imageQueueControl.state == QUEUE_RUNNING || g_imageQueueControl.state == QUEUE_STOPPING) {
-                if (frame->valid && frame->inUse) {
-                    // SPI传输
-                    HAL_StatusTypeDef status = Handler_SPI_Transmit(SPI_INDEX_1, frame->data, NULL, queueItem.size, 1000);
-                    if (status == HAL_OK) {
-                        
-                        g_imageQueueControl.totalProcessed++;
-                    } else {
-                        printf("SPI FAIL: %d\r\n", status);
-                    }
-                } else {
-                    printf("Frame invalid\r\n");
-                }
-            } else {
-                printf("Queue stopped, drop frame\r\n");
-            }
-            
+            // 直接传输数据，不检查复杂状态
+            HAL_StatusTypeDef status = Handler_SPI_Transmit(SPI_INDEX_1, frame->data, NULL, queueItem.size, 1000);
             // 释放缓冲区
             frame->inUse = 0;
             frame->valid = 0;
@@ -67,6 +53,106 @@ static int8_t FindFreeBuffer(void)
     return -1;
 }
 
+// ============ 零拷贝相关接口实现 ============
+
+/**
+ * @brief 分配空闲缓冲区（零拷贝接口）
+ * @return int8_t 缓冲区索引，-1表示无可用缓冲区
+ */
+int8_t ImageQueue_AllocateBuffer(void)
+{
+    if (g_imageQueueControl.imageQueue == NULL) {
+        return -1;
+    }
+
+    int8_t bufferIndex = FindFreeBuffer();
+    if (bufferIndex >= 0) {
+        // 标记缓冲区为使用中，但尚未有效
+        g_imageBuffers[bufferIndex].inUse = 1;
+        g_imageBuffers[bufferIndex].valid = 0;
+        g_imageBuffers[bufferIndex].size = 0;
+    }
+    return bufferIndex;
+}
+
+/**
+ * @brief 获取缓冲区数据指针（零拷贝接口）
+ * @param bufferIndex 缓冲区索引
+ * @return uint8_t* 缓冲区数据指针，NULL表示无效索引
+ */
+uint8_t* ImageQueue_GetBufferPtr(int8_t bufferIndex)
+{
+    if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
+        return NULL;
+    }
+    
+    if (!g_imageBuffers[bufferIndex].inUse) {
+        return NULL;
+    }
+    
+    return g_imageBuffers[bufferIndex].data;
+}
+
+/**
+ * @brief 提交缓冲区到队列（零拷贝接口）
+ * @param bufferIndex 缓冲区索引
+ * @param size 实际数据大小
+ * @return HAL_StatusTypeDef 返回状态
+ */
+HAL_StatusTypeDef ImageQueue_CommitBuffer(int8_t bufferIndex, uint16_t size)
+{
+    if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
+        return HAL_ERROR;
+    }
+    
+    if (!g_imageBuffers[bufferIndex].inUse || size == 0 || size > IMAGE_BUFFER_SIZE) {
+        return HAL_ERROR;
+    }
+    
+    if (g_imageQueueControl.imageQueue == NULL) {
+        return HAL_BUSY;
+    }
+
+    // 设置缓冲区为有效
+    g_imageBuffers[bufferIndex].size = size;
+    g_imageBuffers[bufferIndex].valid = 1;
+    
+    // 创建队列项并发送到队列
+    QueueItem_t queueItem;
+    queueItem.bufferIndex = bufferIndex;
+    queueItem.size = size;
+    
+    if (xQueueSend(g_imageQueueControl.imageQueue, &queueItem, 0) == pdTRUE) {
+        g_imageQueueControl.totalReceived++;
+        return HAL_OK;
+    } else {
+        // 队列满，释放缓冲区
+        g_imageBuffers[bufferIndex].inUse = 0;
+        g_imageBuffers[bufferIndex].valid = 0;
+        g_imageQueueControl.droppedFrames++;
+        return HAL_BUSY;
+    }
+}
+
+/**
+ * @brief 释放缓冲区（零拷贝接口）
+ * @param bufferIndex 缓冲区索引
+ * @return HAL_StatusTypeDef 返回状态
+ */
+HAL_StatusTypeDef ImageQueue_ReleaseBuffer(int8_t bufferIndex)
+{
+    if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
+        return HAL_ERROR;
+    }
+    
+    // 释放缓冲区
+    g_imageBuffers[bufferIndex].inUse = 0;
+    g_imageBuffers[bufferIndex].valid = 0;
+    g_imageBuffers[bufferIndex].size = 0;
+    
+    return HAL_OK;
+}
+
 HAL_StatusTypeDef ImageQueue_AddFrame(uint8_t* imageData, uint16_t size)
 {
     if (imageData == NULL || size == 0 || size > IMAGE_BUFFER_SIZE) {
@@ -74,8 +160,8 @@ HAL_StatusTypeDef ImageQueue_AddFrame(uint8_t* imageData, uint16_t size)
         return HAL_ERROR;
     }
 
-    if (g_imageQueueControl.imageQueue == NULL || g_imageQueueControl.state != QUEUE_RUNNING) {
-        printf("ImageQueue_AddFrame: Queue not running, state=%d\r\n", g_imageQueueControl.state);
+    if (g_imageQueueControl.imageQueue == NULL) {
+        printf("ImageQueue_AddFrame: Queue not available\r\n");
         return HAL_BUSY;
     }
 
@@ -144,44 +230,14 @@ HAL_StatusTypeDef ImageQueue_Start(void)
             g_imageBuffers[i].valid = 0;
             g_imageBuffers[i].size = 0;
         }
-        // 设置为运行状态
-        g_imageQueueControl.state = QUEUE_RUNNING;
+        // 状态管理已简化，无需设置运行状态
         xSemaphoreGive(g_imageQueueControl.queueMutex);
         return HAL_OK;
     }
     return HAL_ERROR;
 }
 
-/**
- * @brief 停止队列处理
- * @return HAL_StatusTypeDef 返回状态
- */
-HAL_StatusTypeDef ImageQueue_Stop(void)
-{
-    if (xSemaphoreTake(g_imageQueueControl.queueMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-        // 设置为正在停止状态，不再接收新图像，但继续处理队列中的图像
-        g_imageQueueControl.state = QUEUE_STOPPING;
-       
-        
-        xSemaphoreGive(g_imageQueueControl.queueMutex);
-        
-        // 等待队列为空
-        uint32_t timeout = 0;
-        while (uxQueueMessagesWaiting(g_imageQueueControl.imageQueue) > 0 && timeout < 1000) {
-            vTaskDelay(pdMS_TO_TICKS(5)); // 等待5ms
-            timeout += 5;
-        }
-        
-        if (xSemaphoreTake(g_imageQueueControl.queueMutex, pdMS_TO_TICKS(100)) == pdTRUE) {
-            // 真正停止
-            g_imageQueueControl.state = QUEUE_STOPPED;
-            xSemaphoreGive(g_imageQueueControl.queueMutex);
-     
-            return HAL_OK;
-        }
-    }
-    return HAL_ERROR;
-}
+
 
 /**
  * @brief 获取队列中的帧数量
@@ -203,10 +259,7 @@ uint32_t ImageQueue_GetCount(void)
  */
 HAL_StatusTypeDef ImageQueue_DeInit(void)
 {
-    // 先停止队列处理
-    if (g_imageQueueControl.state != QUEUE_STOPPED) {
-        ImageQueue_Stop();
-    }
+    // 状态管理已简化，直接清理资源
     
     // 删除任务
     if (g_imageQueueTaskHandle != NULL) {
@@ -265,8 +318,7 @@ HAL_StatusTypeDef ImageQueue_Init(void)
         return HAL_ERROR;
     }
 
-    // 初始化状态
-    g_imageQueueControl.state = QUEUE_STOPPED;
+    // 初始化统计信息
     g_imageQueueControl.totalReceived = 0;
     g_imageQueueControl.totalProcessed = 0;
     g_imageQueueControl.droppedFrames = 0;
@@ -274,14 +326,12 @@ HAL_StatusTypeDef ImageQueue_Init(void)
     // 创建任务
     BaseType_t result = xTaskCreate(
         ImageQueue_Task, "ImageQueueTask", 
-        1024, NULL, 9, &g_imageQueueTaskHandle
+        1024, NULL, 5, &g_imageQueueTaskHandle
     );
-
     if (result != pdPASS) {
         printf("Failed to create image queue task\r\n");
         return HAL_ERROR;
     }
-
     printf("Image queue created successfully\r\n");
     return HAL_OK;
 } 

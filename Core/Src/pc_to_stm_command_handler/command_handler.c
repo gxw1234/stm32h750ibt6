@@ -151,8 +151,8 @@ static void Process_SPI_Queue_start(uint8_t spi_index) {
 
 
 static void Process_SPI_Queue_stop(uint8_t spi_index) {
-    // 停止图像队列处理
-    HAL_StatusTypeDef status = ImageQueue_Stop();
+    // 停止图像队列处理 - 简化版本，不调用ImageQueue_Stop
+    printf("SPI Queue stop requested for index: %d\r\n", spi_index);
     
     // if (status == HAL_OK) {
     //     printf("SPI Queue stopped successfully for index: %d\r\n", spi_index);
@@ -234,37 +234,6 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         break;
                     }
                     case CMD_QUEUE_WRITE: {
-                        uint8_t status = 0x00;  // 0x00=整包数据完整, 0x01=数据不完整, 0xFF=其他错误
-                        
-                        // 检查整包数据完整性
-                        if (header->data_len > 0) {
-                            int data_pos = sizeof(GENERIC_CMD_HEADER);
-                            for (int i = 0; i < header->param_count; i++) {
-                                PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
-                                data_pos += sizeof(PARAM_HEADER) + param_header->param_len;
-                            }
-                            
-                            // 验证数据长度是否匹配
-                            int expected_total_len = sizeof(GENERIC_CMD_HEADER) + header->data_len + sizeof(uint32_t);
-                            if (header->total_packets != expected_total_len) {
-                                status = 0x01;  // 整包长度不匹配
-                                printf("Packet length mismatch: expected=%d, actual=%d\r\n", 
-                                       expected_total_len, header->total_packets);
-                            } else {
-                                // 数据包完整，添加到图像队列
-                                uint8_t* write_data = Buf + data_pos;
-                                HAL_StatusTypeDef result = ImageQueue_AddFrame(write_data, header->data_len);
-                                if (result != HAL_OK) {
-                                    // 图像队列操作失败，但整包数据是完整的
-                                    printf("ImageQueue_AddFrame failed: %d\r\n", result);
-                                }
-                                // 注意：不管图像队列是否成功，只要整包数据完整就返回成功
-                            }
-                        } else {
-                            status = 0xFF;  // 数据长度错误
-                            printf("Error: No data for SPI_WRITE command\r\n");
-                        }
-                        
                         // 发送带协议头的状态响应
                         typedef struct {
                             GENERIC_CMD_HEADER header;
@@ -280,9 +249,26 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         response.header.param_count = 0;
                         response.header.data_len = sizeof(uint8_t);
                         response.header.total_packets = sizeof(Queue_Write_Response);
-                        response.status = status;
                         
+                        uint8_t status = 0x00;  // 0x00=数据完整且队列未满, 0x01=数据不完整, 0x02=队列满, 0xFF=其他错误
+                        
+                        // 检查整包数据完整性
+                        if (header->data_len > 0) {
+                            int data_pos = sizeof(GENERIC_CMD_HEADER);
+                            for (int i = 0; i < header->param_count; i++) {
+                                PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
+                                data_pos += sizeof(PARAM_HEADER) + param_header->param_len; 
+                            }
+                        } else {
+                            status = 0xFF;  // 数据长度错误
+                            printf("[CMD_QUEUE_WRITE] Error: No data for SPI_WRITE command\r\n");
+                        }
+                        
+                        printf("[CMD_QUEUE_WRITE] status: %d\r\n", status);
+                        // 设置响应状态并发送
+                        response.status = status;  // 使用计算出的状态值
                         CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+                        
                         break;
                     }
 

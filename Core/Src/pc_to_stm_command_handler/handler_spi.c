@@ -132,6 +132,8 @@ HAL_StatusTypeDef Handler_SPI_Transmit(uint8_t spi_index, uint8_t *pTxData, uint
             status = HAL_SPI_Transmit(&hspi5, pTxData, DataSize, Timeout);
         }
         HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET);
+
+        // printf("Handler_SPI_Transmit: spi_index=%d, status=%d\r\n", spi_index, status);
        return status;
 
     }
