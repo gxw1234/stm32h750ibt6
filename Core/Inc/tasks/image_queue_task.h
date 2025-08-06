@@ -13,7 +13,7 @@
 #define IMAGE_HEIGHT 240
 #define IMAGE_SIZE (IMAGE_WIDTH * IMAGE_HEIGHT)
 #define IMAGE_BUFFER_SIZE 24576
-#define MAX_QUEUE_SIZE 5 // 最大队列深度为5张图像
+#define MAX_QUEUE_SIZE 10// 最大队列深度为5张图像
 
 // 静态缓冲区结构
 typedef struct {
@@ -43,7 +43,7 @@ typedef struct {
 
 HAL_StatusTypeDef ImageQueue_Init(void);  // 改为返回状态
 void ImageQueue_Task(void *argument);
-HAL_StatusTypeDef ImageQueue_AddFrame(uint8_t* imageData, uint16_t size);
+
 
 // 零拷贝相关接口
 int8_t ImageQueue_AllocateBuffer(void);  // 分配空闲缓冲区，返回索引
@@ -53,7 +53,7 @@ uint8_t* ImageQueue_GetBufferPtr(int8_t bufferIndex);  // 获取缓冲区指针
 
 uint8_t ImageQueue_GetStatus(void);
 HAL_StatusTypeDef ImageQueue_Start(void);
-uint32_t ImageQueue_GetCount(void);
+
 HAL_StatusTypeDef ImageQueue_DeInit(void);  
 
 

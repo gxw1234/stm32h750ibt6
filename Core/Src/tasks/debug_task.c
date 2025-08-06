@@ -32,7 +32,7 @@ void debug_task(void *argument)
     vTaskDelay(pdMS_TO_TICKS(1000));
     while (1)
     {
-        ret = CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+        ret = USB_Sender((uint8_t*)&response, sizeof(response));
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }   

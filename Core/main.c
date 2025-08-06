@@ -208,7 +208,7 @@ int main(void)
   xTaskCreate(IIC_interruption_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 4, &UsbSendTaskHandle);
 
   /*创建USB命令处理线程 */
-  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &UsbCmdTaskHandle);  // 提高优先级到9，确保USB任务优先于SPI任务
+  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 7, &UsbCmdTaskHandle);  // 提高优先级到9，确保USB任务优先于SPI任务
 
 
   // /*创建调试线程 */

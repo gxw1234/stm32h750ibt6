@@ -141,7 +141,7 @@ void ADS1220_Task(void *argument)
         if(sample_count_threshold_reached) {
             // 当达到阈值且数据发送功能启用时，发送所有收集的数据
             if (sending_enabled && buffer_pos > 0) {
-                CDC_Transmit_HS(data_buffer, buffer_pos);
+                USB_Sender(data_buffer, buffer_pos);
                 buffer_pos = 0; // 重置缓冲区位置
             }
             float avg_current_mA = current_mA / 1000;  

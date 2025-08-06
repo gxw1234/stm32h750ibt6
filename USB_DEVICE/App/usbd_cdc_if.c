@@ -137,7 +137,7 @@ extern QueueHandle_t usbMessageQueueHandle;
 static int8_t CDC_Init_HS(void);
 static int8_t CDC_DeInit_HS(void);
 static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length);
-static int8_t CDC_Receive_HS(uint8_t* pbuf, uint32_t *Len);
+static int8_t USB_Receive_HS(uint8_t* pbuf, uint32_t *Len);
 static int8_t CDC_TransmitCplt_HS(uint8_t *pbuf, uint32_t *Len, uint8_t epnum);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
@@ -153,7 +153,7 @@ USBD_CDC_ItfTypeDef USBD_Interface_fops_HS =
   CDC_Init_HS,
   CDC_DeInit_HS,
   CDC_Control_HS,
-  CDC_Receive_HS,
+  USB_Receive_HS,
   CDC_TransmitCplt_HS
 };
 
@@ -273,7 +273,7 @@ static int8_t CDC_Control_HS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
   * @param  Len: Number of data received (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAILL
   */
-static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
+static int8_t USB_Receive_HS(uint8_t* Buf, uint32_t *Len)
 {
 
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
@@ -284,16 +284,12 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
     uint32_t actualLen = (*Len > sizeof(usbData.Buf)) ? sizeof(usbData.Buf) : *Len;
     memcpy(usbData.Buf, Buf, actualLen);
     usbData.Length = actualLen;
-
     if (xQueueSendFromISR(usbMessageQueueHandle, &usbData, &xHigherPriorityTaskWoken) != pdPASS) {
         printf("usb_queue full\r\n");
     }
-
     if (xHigherPriorityTaskWoken == pdTRUE) {
         portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
-
-
     USBD_CDC_SetRxBuffer(&hUsbDeviceHS, Buf);
     USBD_CDC_ReceivePacket(&hUsbDeviceHS);
     return (USBD_OK);
@@ -306,7 +302,7 @@ static int8_t CDC_Receive_HS(uint8_t* Buf, uint32_t *Len)
   * @param  Len: Number of data to be sent (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL or USBD_BUSY
   */
-uint8_t CDC_Transmit_HS(uint8_t* Buf, uint16_t Len)
+uint8_t USB_Sender(uint8_t* Buf, uint16_t Len)
 {
   uint8_t result = USBD_OK;
   /* USER CODE BEGIN 12 */

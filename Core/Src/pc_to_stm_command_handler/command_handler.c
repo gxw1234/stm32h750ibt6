@@ -162,18 +162,13 @@ static void Process_SPI_Queue_stop(uint8_t spi_index) {
 }
 
 static void Process_SPI_Queue_Status(uint8_t spi_index) {
-    // 获取实际的队列状态
+   
     uint8_t queue_count = ImageQueue_GetStatus();
-
-    
     typedef struct {
         GENERIC_CMD_HEADER header;
-        uint8_t queue_status;  // 队列状态数据
+        uint8_t queue_status;  
     } Queue_Status_Response;
-    
     Queue_Status_Response response;
-    
-    // 设置协议头
     response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
     response.header.cmd_id = CMD_READ;           // 队列状态命令
     response.header.device_index = spi_index;            // 使用传入的索引
@@ -181,7 +176,7 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
     response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
     response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
     response.queue_status = queue_count;
-    uint8_t ret = CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+    uint8_t ret = USB_Sender((uint8_t*)&response, sizeof(response));
 }
 
 
@@ -209,14 +204,10 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
    
     if (*Len >= sizeof(GENERIC_CMD_HEADER)) {
         GENERIC_CMD_HEADER* header = (GENERIC_CMD_HEADER*)Buf;
-
-
         // printf("SPI Init Command: Device=%d, ParamCount=%d, ProtocolType=%d, CmdId=%d\r\n", 
         // header->device_index, header->param_count, header->protocol_type, header->cmd_id);
-
         switch (header->protocol_type) {
             case PROTOCOL_SPI: {
-
                 switch (header->cmd_id) {
                     case CMD_INIT: {
                         if (header->param_count > 0) {
@@ -234,44 +225,8 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         break;
                     }
                     case CMD_QUEUE_WRITE: {
-                        // 发送带协议头的状态响应
-                        typedef struct {
-                            GENERIC_CMD_HEADER header;
-                            uint8_t status;  // 状态数据
-                        } Queue_Write_Response;
-                        
-                        Queue_Write_Response response;
-                        
-                        // 设置协议头
-                        response.header.protocol_type = PROTOCOL_SPI;
-                        response.header.cmd_id = CMD_QUEUE_WRITE;
-                        response.header.device_index = header->device_index;
-                        response.header.param_count = 0;
-                        response.header.data_len = sizeof(uint8_t);
-                        response.header.total_packets = sizeof(Queue_Write_Response);
-                        
-                        uint8_t status = 0x00;  // 0x00=数据完整且队列未满, 0x01=数据不完整, 0x02=队列满, 0xFF=其他错误
-                        
-                        // 检查整包数据完整性
-                        if (header->data_len > 0) {
-                            int data_pos = sizeof(GENERIC_CMD_HEADER);
-                            for (int i = 0; i < header->param_count; i++) {
-                                PARAM_HEADER* param_header = (PARAM_HEADER*)(Buf + data_pos);
-                                data_pos += sizeof(PARAM_HEADER) + param_header->param_len; 
-                            }
-                        } else {
-                            status = 0xFF;  // 数据长度错误
-                            printf("[CMD_QUEUE_WRITE] Error: No data for SPI_WRITE command\r\n");
-                        }
-                        
-                        printf("[CMD_QUEUE_WRITE] status: %d\r\n", status);
-                        // 设置响应状态并发送
-                        response.status = status;  // 使用计算出的状态值
-                        CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
-                        
                         break;
                     }
-
                     case CMD_WRITE: {
                         if (header->data_len > 0) {
                             int data_pos = sizeof(GENERIC_CMD_HEADER);
@@ -290,24 +245,20 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                         }
                         break;
                     }
-
-
-
+                    case CMD_QUEUE_START: {
+                        break;
+                    }
                     case CMD_QUEUE_STATUS: {
                         Process_SPI_Queue_Status(header->device_index);
                         break;
                     }
-                    case CMD_QUEUE_START: {
-                        Process_SPI_Queue_start(header->device_index);
-                        break;
-                    }
                     case CMD_QUEUE_STOP: {
-                        Process_SPI_Queue_stop(header->device_index);
                         break;
                     }
-                    
-                    
                     case CMD_READ:
+                    {
+                        break;
+                    }
                     case CMD_TRANSFER:
                         {
                             printf("Unknown SPI command ID: 0x%02X\r\n", header->cmd_id);
@@ -323,7 +274,6 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
             case PROTOCOL_IIC: {
                 switch (header->cmd_id) {
                     case CMD_INIT: {
-
                         break;
                     }
                     case CMD_WRITE: {
@@ -338,24 +288,16 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
                 break;
             }         
             case PROTOCOL_UART: {
-
                 break;
             }
             case PROTOCOL_RESETSTM32: {
-
                 switch (header->cmd_id) {
-
                     case CMD_INIT:
                     {
-
                         handler_reset_usb3300_stm32();
-
-
                         break;
                     }
                 }
-
-
                 break;
             }
             

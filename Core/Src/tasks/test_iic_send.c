@@ -121,7 +121,7 @@ void IIC_interruption_Task(void *argument)
             response.header.data_len = sizeof(uint8_t);
             response.header.total_packets = sizeof(Scan_gpio_Response);
             response.status = 1;
-            CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+            USB_Sender((uint8_t*)&response, sizeof(response));
 
             usb_send_flag = 0; // 复位标志位
         }

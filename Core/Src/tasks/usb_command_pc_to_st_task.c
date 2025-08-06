@@ -17,8 +17,7 @@
 #define BIG_BUFFER_SIZE (1024*24*2)  
 // 将大缓冲区放到主RAM区域，避免DTCMRAM溢出
 static uint8_t big_buffer[BIG_BUFFER_SIZE] __attribute__((section(".ram_buffers")));
-// 将FreeRTOS堆也放到主RAM区域，彻底解决DTCMRAM溢出问题
-uint8_t ucHeap[configTOTAL_HEAP_SIZE] __attribute__((section(".ram_buffers")));
+
 
 
 
@@ -38,7 +37,8 @@ static uint8_t is_queue_write_cmd = 0;      // 是否为CMD_QUEUE_WRITE命令
 static int8_t image_buffer_index = -1;      // 图像缓冲区索引
 QueueHandle_t usbMessageQueueHandle = NULL;
 
-// 发送CMD_QUEUE_WRITE状态响应的封装函数
+
+// 发送CMD_QUEUE_WRITE
 static void send_queue_write_response(uint8_t status)
 {
     typedef struct {
@@ -54,43 +54,46 @@ static void send_queue_write_response(uint8_t status)
     response.header.data_len = sizeof(uint8_t);
     response.header.total_packets = sizeof(Queue_Write_Response);
     response.status = status;
-    CDC_Transmit_HS((uint8_t*)&response, sizeof(response));
+    USB_Sender((uint8_t*)&response, sizeof(response));
 
 }
 
 void usb_command_pc_to_st_task(void *argument)
 {
-    // 清空缓冲区
+    
     memset(big_buffer, 0, BIG_BUFFER_SIZE);
-    // 创建USB消息队列
-    usbMessageQueueHandle = xQueueCreate(200, sizeof(USB_Data_TypeDef));
+
+
+    // 100*512=51200/96*240=2   可以存两张图
+    usbMessageQueueHandle = xQueueCreate(100, sizeof(USB_Data_TypeDef));
     if (usbMessageQueueHandle == NULL) {
         printf("[USB] Queue create failed!\r\n");
         vTaskDelete(NULL);
         return;
     }
-    
-
     USB_Data_TypeDef usbData;
-    
     while (1) {
         if (xQueueReceive(usbMessageQueueHandle, &usbData, portMAX_DELAY) == pdPASS) {
-            
             if (frame_state == WAITING_FOR_HEADER) {
-                // 查找帧头
+                // 查找帧头  
                 if (usbData.Length >= 4) {
                     uint32_t *header = (uint32_t*)usbData.Buf;
-
-                    //查找帧头
+                    //找到帧头要处理协议
                     if (*header == FRAME_START_MARKER) {
                         // 解析协议头信息
                         if (usbData.Length >= 12) {  // 帧头4 + 协议头8字节
+
+                            //=================解析协议头========================
                             // 协议头格式：[protocol_type:1][cmd_id:1][reserved:2][param_count:1][reserved:1][total_packets:2]
-                            uint8_t protocol_type = usbData.Buf[4];              // 协议类型
-                            uint8_t cmd_id_byte = usbData.Buf[5];                // 命令ID
+                            //======================解析协议头===========================
+
+                            // 协议类型  
+                            uint8_t protocol_type = usbData.Buf[4];    
+                            // 命令ID         
+                            uint8_t cmd_id_byte = usbData.Buf[5];    
+                            // 总数据包长
                             uint16_t total_packets;
-                            memcpy(&total_packets, usbData.Buf + 10, 2);         // 总数据包长度
-                            
+                            memcpy(&total_packets, usbData.Buf + 10, 2);         
                             frame_type = protocol_type;
                             cmd_id = cmd_id_byte;
                             expected_total_length = 4 + total_packets + 4;       // 帧头 + 数据 + 帧尾
@@ -99,6 +102,11 @@ void usb_command_pc_to_st_task(void *argument)
 
                             if (is_queue_write_cmd) {
                                 // CMD_QUEUE_WRITE: 分配图像缓冲区
+                                
+                                // 用零拷贝方式提交图像数据
+
+                                //收到图像以后直接提交到队列
+                                // 计算纯图像数据大小：总长度 - 帧头(4) - 协议头(sizeof(GENERIC_CMD_HEADER)) - 帧尾(4)
                                 image_buffer_index = ImageQueue_AllocateBuffer();
                                 if (image_buffer_index >= 0) {
                                     uint8_t* image_buffer = ImageQueue_GetBufferPtr(image_buffer_index);
@@ -114,18 +122,16 @@ void usb_command_pc_to_st_task(void *argument)
                                     continue;
                                 }
                             } else {
-                                // 其他命令: 使用big_buffer
+
                                 memcpy(big_buffer, usbData.Buf, usbData.Length);
                             }
                             received_length = usbData.Length;
-                            
-                            // 检查当前包是否已包含完整数据
                             if (received_length >= expected_total_length) {
-                                
-                                // 根据命令类型进行不同处理
                                 if (is_queue_write_cmd) {
                                     // CMD_QUEUE_WRITE: 只提交纯图像数据（去掉帧头和帧尾）
                                     if (image_buffer_index >= 0) {
+                                        // 用零拷贝方式提交图像数据
+                                        //收到图像以后直接提交到队列
                                         // 计算纯图像数据大小：总长度 - 帧头(4) - 协议头(sizeof(GENERIC_CMD_HEADER)) - 帧尾(4)
                                         uint32_t image_data_size = received_length - 4 - sizeof(GENERIC_CMD_HEADER) - 4;
                                         
@@ -137,12 +143,9 @@ void usb_command_pc_to_st_task(void *argument)
                                         }
                                     }
                                 } else {
-                                    // 其他命令: 调用Process_Command
                                     uint32_t cmd_length = received_length - 8; // 去掉帧头和帧尾
                                     Process_Command(big_buffer + 4, &cmd_length); // 跳过帧头
                                 }
-                                
-                                // 重置状态
                                 frame_state = WAITING_FOR_HEADER;
                                 received_length = 0;
                                 is_queue_write_cmd = 0;

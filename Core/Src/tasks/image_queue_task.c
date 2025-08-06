@@ -4,36 +4,22 @@
 #include <stdio.h>
 #include "cmsis_os.h"
 
-// 静态缓冲区池
 __attribute__((section(".ram_buffers"))) static StaticImageFrame_t g_imageBuffers[MAX_QUEUE_SIZE];
-
-// 队列控制结构
 static ImageQueueControl_t g_imageQueueControl = {0};
-
-// FreeRTOS任务句柄
 static TaskHandle_t g_imageQueueTaskHandle = NULL;
 
-/**
- * @brief 图像队列处理任务（简化版本）
- * @param argument 任务参数（未使用）
- */
 void ImageQueue_Task(void *argument)
 {
-
-    
     (void)argument; 
     QueueItem_t queueItem;  // 只有3字节，安全
     static TickType_t lastFrameStartTime = 0;  // 记录上一帧开始时间
     const TickType_t frameInterval = pdMS_TO_TICKS(4);  // 4ms帧间隔
-    
     for (;;) {
-        // 从队列中接收缓冲区索引
+      
         if (xQueueReceive(g_imageQueueControl.imageQueue, &queueItem, portMAX_DELAY) == pdTRUE) {
-            // 获取对应的静态缓冲区
+            //获取对应的静态缓冲区，的bufferIndex位置
             StaticImageFrame_t* frame = &g_imageBuffers[queueItem.bufferIndex];
-            // 直接传输数据，不检查复杂状态
             HAL_StatusTypeDef status = Handler_SPI_Transmit(SPI_INDEX_1, frame->data, NULL, queueItem.size, 1000);
-            // 释放缓冲区
             frame->inUse = 0;
             frame->valid = 0;
         }
@@ -43,6 +29,7 @@ void ImageQueue_Task(void *argument)
 /**
  * @brief 查找空闲缓冲区
  */
+
 static int8_t FindFreeBuffer(void)
 {
     for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
@@ -55,10 +42,7 @@ static int8_t FindFreeBuffer(void)
 
 // ============ 零拷贝相关接口实现 ============
 
-/**
- * @brief 分配空闲缓冲区（零拷贝接口）
- * @return int8_t 缓冲区索引，-1表示无可用缓冲区
- */
+
 int8_t ImageQueue_AllocateBuffer(void)
 {
     if (g_imageQueueControl.imageQueue == NULL) {
@@ -104,29 +88,21 @@ HAL_StatusTypeDef ImageQueue_CommitBuffer(int8_t bufferIndex, uint16_t size)
     if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
         return HAL_ERROR;
     }
-    
     if (!g_imageBuffers[bufferIndex].inUse || size == 0 || size > IMAGE_BUFFER_SIZE) {
         return HAL_ERROR;
     }
-    
     if (g_imageQueueControl.imageQueue == NULL) {
         return HAL_BUSY;
     }
-
-    // 设置缓冲区为有效
     g_imageBuffers[bufferIndex].size = size;
     g_imageBuffers[bufferIndex].valid = 1;
-    
-    // 创建队列项并发送到队列
     QueueItem_t queueItem;
     queueItem.bufferIndex = bufferIndex;
     queueItem.size = size;
-    
     if (xQueueSend(g_imageQueueControl.imageQueue, &queueItem, 0) == pdTRUE) {
         g_imageQueueControl.totalReceived++;
         return HAL_OK;
     } else {
-        // 队列满，释放缓冲区
         g_imageBuffers[bufferIndex].inUse = 0;
         g_imageBuffers[bufferIndex].valid = 0;
         g_imageQueueControl.droppedFrames++;
@@ -150,52 +126,6 @@ HAL_StatusTypeDef ImageQueue_ReleaseBuffer(int8_t bufferIndex)
     g_imageBuffers[bufferIndex].valid = 0;
     g_imageBuffers[bufferIndex].size = 0;
     
-    return HAL_OK;
-}
-
-HAL_StatusTypeDef ImageQueue_AddFrame(uint8_t* imageData, uint16_t size)
-{
-    if (imageData == NULL || size == 0 || size > IMAGE_BUFFER_SIZE) {
-        printf("ImageQueue_AddFrame: Invalid params\r\n");
-        return HAL_ERROR;
-    }
-
-    if (g_imageQueueControl.imageQueue == NULL) {
-        printf("ImageQueue_AddFrame: Queue not available\r\n");
-        return HAL_BUSY;
-    }
-
-    // 查找空闲缓冲区
-    int8_t bufferIndex = FindFreeBuffer();
-    if (bufferIndex < 0) {
-        printf("ImageQueue_AddFrame: No free buffer, dropped=%lu\r\n", g_imageQueueControl.droppedFrames);
-        g_imageQueueControl.droppedFrames++;
-        return HAL_BUSY;
-    }
-
-    // 填充缓冲区
-    StaticImageFrame_t* frame = &g_imageBuffers[bufferIndex];
-    frame->size = size;
-    frame->valid = 1;
-    frame->inUse = 1;
-    memcpy(frame->data, imageData, size);
-
-    g_imageQueueControl.totalReceived++;
-    
-    // 发送索引到队列
-    QueueItem_t queueItem = {.bufferIndex = bufferIndex, .size = size};
-    BaseType_t result = xQueueSend(g_imageQueueControl.imageQueue, &queueItem, 0);
-    
-    if (result != pdTRUE) {
-        printf("ImageQueue_AddFrame: Queue send failed, queue_count=%d\r\n", 
-               (int)uxQueueMessagesWaiting(g_imageQueueControl.imageQueue));
-        frame->inUse = 0;
-        frame->valid = 0;
-        g_imageQueueControl.droppedFrames++;
-        return HAL_BUSY;
-    }
-    
-
     return HAL_OK;
 }
 
@@ -237,20 +167,6 @@ HAL_StatusTypeDef ImageQueue_Start(void)
     return HAL_ERROR;
 }
 
-
-
-/**
- * @brief 获取队列中的帧数量
- * @return uint32_t 队列中的帧数量
- */
-uint32_t ImageQueue_GetCount(void)
-{
-    if (g_imageQueueControl.imageQueue == NULL) {
-        return 0;
-    }
-    
-    return uxQueueMessagesWaiting(g_imageQueueControl.imageQueue);
-}
 
 /**
  * @brief 清理图像队列系统资源

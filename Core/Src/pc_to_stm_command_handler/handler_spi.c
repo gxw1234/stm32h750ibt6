@@ -156,7 +156,7 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
         packet.header.data_len = SPI_RX_BUFFER_SIZE;  // 数据长度
         packet.header.total_packets = sizeof(SPI_Data_Packet); // 总包大小
         memcpy(packet.data, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
-        CDC_Transmit_HS((uint8_t*)&packet, sizeof(packet));
+        USB_Sender((uint8_t*)&packet, sizeof(packet));
         HAL_SPI_Receive_IT(&hspi5, spi_rx_buffer, SPI_RX_BUFFER_SIZE);
     }
 }
