@@ -3,28 +3,17 @@
 #include <stdio.h>
 #include <string.h>
 #include "pc_to_stm_command_handler/command_handler.h"
-#include "FreeRTOS.h"  // 为了使用configTOTAL_HEAP_SIZE
-#include "tasks/image_queue_task.h"  // 零拷贝接口
+#include "FreeRTOS.h"  
+#include "tasks/image_queue_task.h"  
 
-// 定义结束标记
 #define CMD_END_MARKER      0xA5A5A5A5
-// 定义帧头标识符
 #define FRAME_START_MARKER  0x5A5A5A5A 
+#define BIG_BUFFER_SIZE (1024)  
+static uint8_t big_buffer[BIG_BUFFER_SIZE] ;
 
-
-
-// 定义大缓冲区大小 - 优化为1KB
-#define BIG_BUFFER_SIZE (1024*24*2)  
-// 将大缓冲区放到主RAM区域，避免DTCMRAM溢出
-static uint8_t big_buffer[BIG_BUFFER_SIZE] __attribute__((section(".ram_buffers")));
-
-
-
-
-// 简单的帧处理状态
 typedef enum {
-    WAITING_FOR_HEADER,     // 等待帧头
-    RECEIVING_DATA          // 正在接收数据
+    WAITING_FOR_HEADER,     
+    RECEIVING_DATA          
 } frame_state_t;
 
 // 帧处理变量
@@ -41,11 +30,11 @@ QueueHandle_t usbMessageQueueHandle = NULL;
 // 发送CMD_QUEUE_WRITE
 static void send_queue_write_response(uint8_t status)
 {
+
     typedef struct {
         GENERIC_CMD_HEADER header;
         uint8_t status;  // 状态数据
     } Queue_Write_Response;
-    
     Queue_Write_Response response;
     response.header.protocol_type = PROTOCOL_SPI;
     response.header.cmd_id = CMD_QUEUE_WRITE;
@@ -60,14 +49,11 @@ static void send_queue_write_response(uint8_t status)
 
 void usb_command_pc_to_st_task(void *argument)
 {
-    
     memset(big_buffer, 0, BIG_BUFFER_SIZE);
-
-
     // 100*512=51200/96*240=2   可以存两张图
     usbMessageQueueHandle = xQueueCreate(100, sizeof(USB_Data_TypeDef));
     if (usbMessageQueueHandle == NULL) {
-        printf("[USB] Queue create failed!\r\n");
+        printf("Queue create failed!\r\n");
         vTaskDelete(NULL);
         return;
     }
@@ -87,30 +73,23 @@ void usb_command_pc_to_st_task(void *argument)
                             // 协议头格式：[protocol_type:1][cmd_id:1][reserved:2][param_count:1][reserved:1][total_packets:2]
                             //======================解析协议头===========================
 
-                            // 协议类型  
-                            uint8_t protocol_type = usbData.Buf[4];    
-                            // 命令ID         
+                            // 协议类型    命令ID  总数据包长
+                            uint8_t protocol_type = usbData.Buf[4];          
                             uint8_t cmd_id_byte = usbData.Buf[5];    
-                            // 总数据包长
                             uint16_t total_packets;
                             memcpy(&total_packets, usbData.Buf + 10, 2);         
                             frame_type = protocol_type;
                             cmd_id = cmd_id_byte;
                             expected_total_length = 4 + total_packets + 4;       // 帧头 + 数据 + 帧尾
-                        
                             is_queue_write_cmd = (protocol_type == PROTOCOL_SPI && cmd_id_byte == CMD_QUEUE_WRITE);
-
                             if (is_queue_write_cmd) {
                                 // CMD_QUEUE_WRITE: 分配图像缓冲区
-                                
                                 // 用零拷贝方式提交图像数据
-
                                 //收到图像以后直接提交到队列
                                 // 计算纯图像数据大小：总长度 - 帧头(4) - 协议头(sizeof(GENERIC_CMD_HEADER)) - 帧尾(4)
                                 image_buffer_index = ImageQueue_AllocateBuffer();
                                 if (image_buffer_index >= 0) {
                                     uint8_t* image_buffer = ImageQueue_GetBufferPtr(image_buffer_index);
-                                    // 跳过帧头(4字节)和协议头(8字节)，只拷贝纯图像数据
                                     uint32_t data_offset = 4 + sizeof(GENERIC_CMD_HEADER);  // 12字节
                                     uint32_t copy_length = (usbData.Length > data_offset) ? (usbData.Length - data_offset) : 0;
                                     if (copy_length > 0) {
@@ -134,7 +113,6 @@ void usb_command_pc_to_st_task(void *argument)
                                         //收到图像以后直接提交到队列
                                         // 计算纯图像数据大小：总长度 - 帧头(4) - 协议头(sizeof(GENERIC_CMD_HEADER)) - 帧尾(4)
                                         uint32_t image_data_size = received_length - 4 - sizeof(GENERIC_CMD_HEADER) - 4;
-                                        
                                         HAL_StatusTypeDef result = ImageQueue_CommitBuffer(image_buffer_index, image_data_size);
                                         if (result == HAL_OK) {
                                             send_queue_write_response(0x00);  // 0x00=数据完整且队列未满
@@ -172,16 +150,12 @@ void usb_command_pc_to_st_task(void *argument)
                         memcpy(big_buffer + received_length, usbData.Buf, usbData.Length);
                     }
                     received_length += usbData.Length;
-                    // 检查是否接收完成
-                    if (received_length >= expected_total_length) {
-                        
-                        // 根据命令类型进行不同处理
+                    if (received_length >= expected_total_length) {                       
                         if (is_queue_write_cmd) {
                             // CMD_QUEUE_WRITE: 只提交纯图像数据（去掉帧头和帧尾）
                             if (image_buffer_index >= 0) {
                                 // 计算纯图像数据大小：总长度 - 帧头(4) - 协议头(sizeof(GENERIC_CMD_HEADER)) - 帧尾(4)
                                 uint32_t image_data_size = received_length - 4 - sizeof(GENERIC_CMD_HEADER) - 4;
-                                
                                 HAL_StatusTypeDef result = ImageQueue_CommitBuffer(image_buffer_index, image_data_size);
                                 if (result == HAL_OK) {
                                     send_queue_write_response(0x00);  // 0x00=数据完整且队列未满
@@ -190,12 +164,10 @@ void usb_command_pc_to_st_task(void *argument)
                                 }
                             }
                         } else {
-                            // 其他命令: 调用Process_Command
-                            uint32_t cmd_length = received_length - 8; // 去掉帧头和帧尾
-                            Process_Command(big_buffer + 4, &cmd_length); // 跳过帧头
+
+                            uint32_t cmd_length = received_length - 8; 
+                            Process_Command(big_buffer + 4, &cmd_length); 
                         }
-                        
-                        // 重置状态
                         frame_state = WAITING_FOR_HEADER;
                         received_length = 0;
                         is_queue_write_cmd = 0;

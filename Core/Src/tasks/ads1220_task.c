@@ -14,15 +14,6 @@
 
 
 
-
-
-// #define SPI_CS3_LOW()       HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_RESET)
-// #define SPI_CS3_HIGH()      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_7, GPIO_PIN_SET)
-// #define SPI_CS4_LOW()       HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_RESET)
-// #define SPI_CS4_HIGH()      HAL_GPIO_WritePin(GPIOH, GPIO_PIN_8, GPIO_PIN_SET)
-
-
-
 SPI_HandleTypeDef hspi4;
 
 
