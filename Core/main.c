@@ -70,6 +70,7 @@ TaskHandle_t lcdTaskHandle;
 TaskHandle_t ads1220TaskHandle;  
 TaskHandle_t mp8865TaskHandle; 
 TaskHandle_t UsbCmdTaskHandle; 
+TaskHandle_t IIC_interruption_TaskHandle; 
 TaskHandle_t DebugTaskHandle; 
 /* USER CODE BEGIN PV */
 
@@ -201,18 +202,25 @@ int main(void)
   /*创建ADS1220线程 */
   // xTaskCreate(ADS1220_Task, "ADS1220Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &ads1220TaskHandle);
   
+
+  
   /*创建MP8865线程 */
   // xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
-  // /*摄像头IIC中断线程 */
-  xTaskCreate(IIC_interruption_Task, "UsbSendTask", configMINIMAL_STACK_SIZE * 2, NULL, 4, &UsbSendTaskHandle);
+  // /*摄像头IIC中断线程
+  //   线程优先级设置为4
+  // 用于摄像头数据接收 */
+  xTaskCreate(IIC_interruption_Task, "IIC_interruption_TaskHandle", configMINIMAL_STACK_SIZE * 2, NULL,4, &IIC_interruption_TaskHandle);
 
-  /*创建USB命令处理线程 */
-  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 7, &UsbCmdTaskHandle);  // 提高优先级到9，确保USB任务优先于SPI任务
+  /*创建USB命令处理线程
+  接收USB数据并解析
+  线程优先级设置为7
+  */
+  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 6, &UsbCmdTaskHandle);  
 
 
   // /*创建调试线程 */
-  // xTaskCreate(debug_task, "DebugTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &DebugTaskHandle);
+  // xTaskCreate(debug_task, "DebugTask", configMINIMAL_STACK_SIZE * 4, NULL,5, &DebugTaskHandle);
 
 
   osKernelStart();

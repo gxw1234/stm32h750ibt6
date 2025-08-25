@@ -53,25 +53,25 @@
   extern uint32_t SystemCoreClock;
   void xPortSysTickHandler(void);
 #endif
-#define configENABLE_FPU                         0
-#define configENABLE_MPU                         0
+#define configENABLE_FPU                         0  // 启用FPU
+#define configENABLE_MPU                         0  // 启用MPU
 
-#define configUSE_PREEMPTION                     1
-#define configSUPPORT_STATIC_ALLOCATION          1
-#define configSUPPORT_DYNAMIC_ALLOCATION         1
-#define configUSE_IDLE_HOOK                      0
-#define configUSE_TICK_HOOK                      0
-#define configCPU_CLOCK_HZ                       ( SystemCoreClock )
+#define configUSE_PREEMPTION                     1  // 启用抢占
+#define configSUPPORT_STATIC_ALLOCATION          1  // 支持静态分配
+#define configSUPPORT_DYNAMIC_ALLOCATION         1  // 支持动态分配
+#define configUSE_IDLE_HOOK                      0 // 空闲钩子
+#define configUSE_TICK_HOOK                      0 // 时钟钩子
+#define configCPU_CLOCK_HZ                       ( SystemCoreClock ) // CPU时钟
 
-#define configTICK_RATE_HZ                       ((TickType_t)480)
-#define configMAX_PRIORITIES                     ( 7 )
-#define configMINIMAL_STACK_SIZE                 ((uint16_t)128)
-#define configTOTAL_HEAP_SIZE                    ((size_t)65536)
+#define configTICK_RATE_HZ                       ((TickType_t)480)  // 时钟频率
+#define configMAX_PRIORITIES                     ( 7 )   // 最高优先级16
+#define configMINIMAL_STACK_SIZE                 ((uint16_t)128)  // 最小栈大小
+#define configTOTAL_HEAP_SIZE                    ((size_t)65536)  // 总堆大小
 #define configMAX_TASK_NAME_LEN                  ( 16 )
-#define configUSE_16_BIT_TICKS                   0
-#define configUSE_MUTEXES                        1
-#define configQUEUE_REGISTRY_SIZE                8
-#define configUSE_PORT_OPTIMISED_TASK_SELECTION  1
+#define configUSE_16_BIT_TICKS                   0 // 16位时钟
+#define configUSE_MUTEXES                        1 // 使用互斥量
+#define configQUEUE_REGISTRY_SIZE                8 // 队列注册表大小
+#define configUSE_PORT_OPTIMISED_TASK_SELECTION  1 // 使用优化任务选择
 /* USER CODE BEGIN MESSAGE_BUFFER_LENGTH_TYPE */
 /* Defaults to size_t for backward compatibility, but can be changed
    if lengths will always be less than the number of bytes in a size_t. */
@@ -84,14 +84,14 @@
 
 /* Set the following definitions to 1 to include the API function, or zero
 to exclude the API function. */
-#define INCLUDE_vTaskPrioritySet             1
-#define INCLUDE_uxTaskPriorityGet            1
-#define INCLUDE_vTaskDelete                  1
-#define INCLUDE_vTaskCleanUpResources        0
-#define INCLUDE_vTaskSuspend                 1
-#define INCLUDE_vTaskDelayUntil              0
-#define INCLUDE_vTaskDelay                   1
-#define INCLUDE_xTaskGetSchedulerState       1
+#define INCLUDE_vTaskPrioritySet             1 // 任务优先级设置
+#define INCLUDE_uxTaskPriorityGet            1 // 任务优先级获取
+#define INCLUDE_vTaskDelete                  1 // 任务删除
+#define INCLUDE_vTaskCleanUpResources        0 // 任务资源清理
+#define INCLUDE_vTaskSuspend                 1 // 任务挂起
+#define INCLUDE_vTaskDelayUntil              1 // 任务延迟
+#define INCLUDE_vTaskDelay                   1 // 任务延迟
+#define INCLUDE_xTaskGetSchedulerState       1 // 任务调度状态
 
 /* Cortex-M specific definitions. */
 #ifdef __NVIC_PRIO_BITS

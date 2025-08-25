@@ -42,10 +42,8 @@ static void Process_SPI_Init(uint8_t spi_index, PSPI_CONFIG pConfig) {
 static void Process_Power_SetVoltage(uint8_t channel, uint16_t voltage_mv) {
     // 将毫伏转换为伏特
     float voltage_v = voltage_mv / 1000.0f;
-    
-    // printf("Power Set Voltage: Channel=%d, Target=%.3fV (%dmV)\r\n", 
-    //        channel, voltage_v, voltage_mv);
-    
+    printf("Power Set Voltage: Channel=%d, Target=%.3fV (%dmV)\r\n", 
+           channel, voltage_v, voltage_mv);
     HAL_StatusTypeDef status = MP8865_SetVoltageV(voltage_v);
     
     // if (status == HAL_OK) {
@@ -56,32 +54,18 @@ static void Process_Power_SetVoltage(uint8_t channel, uint16_t voltage_mv) {
 }
 
 
-/**
- * @brief 处理开始读取电流命令
- * 
- * @param device_index 设备索引
- */
 static void Process_Power_StartCurrentReading(uint8_t device_index) {
     printf("Receive Command:POWER_CMD_START_CURRENT_READING,device_index:%d\r\n", device_index);
     Enable_Current_Data_Sending();
 }
 
-/**
- * @brief 处理停止读取电流命令
- * 
- * @param device_index 设备索引
- */
+
 static void Process_Power_StopCurrentReading(uint8_t device_index) {
     printf("Receive Command:POWER_CMD_STOP_CURRENT_READING,device_index:%d\r\n", device_index);
     Disable_Current_Data_Sending();
 }
 
-/**
- * @brief 处理IIC初始化命令
- * 
- * @param iic_index IIC索引
- * @param pConfig IIC配置结构体指针
- */
+
 static void Process_IIC_Init(uint8_t iic_index, PIIC_CONFIG pConfig) {
 
     printf("IIC init: %d, ClockSpeed=%lu, OwnAddr=0x%04X, Master=%d, AddrBits=%d, EnablePu=%d\r\n", 
@@ -151,9 +135,7 @@ static void Process_SPI_Queue_start(uint8_t spi_index) {
 
 
 static void Process_SPI_Queue_stop(uint8_t spi_index) {
-    // 停止图像队列处理 - 简化版本，不调用ImageQueue_Stop
     printf("SPI Queue stop requested for index: %d\r\n", spi_index);
-    
     // if (status == HAL_OK) {
     //     printf("SPI Queue stopped successfully for index: %d\r\n", spi_index);
     // } else {
@@ -163,7 +145,8 @@ static void Process_SPI_Queue_stop(uint8_t spi_index) {
 
 static void Process_SPI_Queue_Status(uint8_t spi_index) {
    
-    uint8_t queue_count = ImageQueue_GetStatus();
+    // uint8_t queue_count = ImageQueue_GetStatus();
+    uint8_t queue_count = ImageQueue_GetBufferUsage();
     typedef struct {
         GENERIC_CMD_HEADER header;
         uint8_t queue_status;  
@@ -378,23 +361,27 @@ int8_t Process_Command(uint8_t* Buf, uint32_t *Len) {
             case PROTOCOL_POWER: {
                 switch (header->cmd_id) {
                     case POWER_CMD_SET_VOLTAGE: {
-                        uint16_t voltage_mv = 0;
-                        if (header->data_len >= sizeof(uint16_t)) {
-                            memcpy(&voltage_mv, Buf + sizeof(GENERIC_CMD_HEADER), sizeof(uint16_t));
-                            Process_Power_SetVoltage(header->device_index, voltage_mv);
+                        if (header->param_count > 0) {
+                            int pos = sizeof(GENERIC_CMD_HEADER);
+                            uint16_t voltage_mv;
+                            pos = Get_Parameter(Buf, pos, &voltage_mv, sizeof(uint16_t));
+                            if (pos > 0) {
+                                Process_Power_SetVoltage(header->device_index, voltage_mv);
+                            } else {
+                                printf("Error: Invalid parameter format for POWER_SET_VOLTAGE\r\n");
+                            }
                         } else {
-   
-                            printf("Error: No voltage value for POWER_SET_VOLTAGE command\r\n");
+                            printf("Error: No parameters for POWER_SET_VOLTAGE command\r\n");
                         }
                         break;
                     }
                     
-                    case POWER_CMD_START_CURRENT_READING: {
+                    case POWER_CMD_START_READING: {
                         Process_Power_StartCurrentReading(header->device_index);
                         break;
                     }
                     
-                    case POWER_CMD_STOP_CURRENT_READING: {
+                    case POWER_CMD_STOP_READING: {
                         Process_Power_StopCurrentReading(header->device_index);
                         break;
                     }

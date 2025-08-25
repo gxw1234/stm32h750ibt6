@@ -6,13 +6,18 @@
 #include <string.h>
 #include <stdio.h>
 
-// 协议类型定义
-#define PROTOCOL_SPI        0x01    // SPI协议
-#define PROTOCOL_IIC        0x02    // IIC协议
-#define PROTOCOL_UART       0x03    // UART协议
-#define PROTOCOL_GPIO       0x04    // GPIO协议
-#define PROTOCOL_POWER      0x05    // 电源协议
-#define PROTOCOL_RESETSTM32      0x06    // 复位STM32
+// 协议类型定义  protocol_type
+#define PROTOCOL_SPI        0x01    
+#define PROTOCOL_IIC        0x02    
+#define PROTOCOL_UART       0x03    
+#define PROTOCOL_GPIO       0x04    
+#define PROTOCOL_POWER      0x05    
+#define PROTOCOL_RESETSTM32      0x06    
+#define PROTOCOL_BOOTLOADER_WRITE_BYTES    0x07    
+#define PROTOCOL_GET_FIRMWARE_INFO    0x08    
+
+
+//------------cmd_id以下都是命令ID-------------------------
 
 // 通用命令ID定义
 #define CMD_INIT            0x01    // 初始化命令
@@ -39,22 +44,22 @@
 #define GPIO_DIR_INPUT   0x00    // 输入模式
 #define GPIO_DIR_WRITE   0x03    // 写入
 #define GPIO_SCAN_DIR_WRITE   0x04    // 扫描写入
-//---------------GPIO------------------
 
-#define GPIO_SCAN_MODE_WRITE   0x04    // 扫描写入
+//---------------------IIC-----------
+#define GPIO_SCAN_MODE_WRITE   0x04    // IIC
 
-// 电源命令ID定义
-#define POWER_CMD_SET_VOLTAGE       0x01  // 设置电压命令
-#define POWER_CMD_START_CURRENT_READING 0x02  // 开始读取电流命令
-#define POWER_CMD_STOP_CURRENT_READING  0x03  // 停止读取电流命令
+
+//----Power------------
+#define POWER_CMD_SET_VOLTAGE   0x01  // 设置电压命令
+#define POWER_CMD_START_READING 0x02  // 开始读取电流命令
+#define POWER_CMD_STOP_READING  0x03  // 停止读取电流命令
 #define POWER_CMD_READ_CURRENT_DATA     0x04  // 读取电流数据命令
 
-// 电源通道定义
+
+// -------电源通道定义-------
 #define POWER_CHANNEL_1         0x01  // 电源通道1
 #define POWER_CHANNEL_UA        0x02  // 微安电流通道
 #define POWER_CHANNEL_MA        0x03  // 毫安电流通道
-
-
 
 
 // 通用命令包头结构

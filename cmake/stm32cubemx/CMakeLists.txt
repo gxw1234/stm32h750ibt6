@@ -76,6 +76,7 @@ target_sources(stm32cubemx INTERFACE
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_exti.c
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart.c
     ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_uart_ex.c
+    ../../Drivers/STM32H7xx_HAL_Driver/Src/stm32h7xx_hal_tim.c
     ../../Core/Src/config/system_stm32h7xx.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/croutine.c
     ../../Middlewares/Third_Party/FreeRTOS/Source/event_groups.c
@@ -112,5 +113,3 @@ target_link_libraries(stm32cubemx INTERFACE
 if(CMAKE_C_STANDARD LESS 11)
     message(ERROR "Generated code requires C11 or higher")
 endif()
-
-

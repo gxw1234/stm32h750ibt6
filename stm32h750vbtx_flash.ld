@@ -185,6 +185,14 @@ SECTIONS
     . = ALIGN(4);
   } >RAM
 
+  /* DMA buffers section in AXI SRAM for DMA accessibility */
+  .dma_buffer (NOLOAD) :
+  {
+    . = ALIGN(32);     /* 32-byte alignment for cache operations */
+    *(.dma_buffer)     /* DMA accessible buffers */
+    . = ALIGN(32);
+  } >RAM
+
   /* Remove information from the standard libraries */
   /DISCARD/ :
   {
@@ -194,5 +202,3 @@ SECTIONS
   }
 
 }
-
-

@@ -3,6 +3,36 @@
 #include <string.h>
 #include <stdio.h>
 #include "cmsis_os.h"
+#include "stm32h7xx_hal.h"
+#include "stm32h7xx_hal_tim.h"
+
+// 硬件定时器精确延时
+static TIM_HandleTypeDef htim6;
+
+static void TIM6_Init(void) {
+    __HAL_RCC_TIM6_CLK_ENABLE();
+    
+    htim6.Instance = TIM6;
+    htim6.Init.Prescaler = 240 - 1;  // APB1定时器时钟240MHz / 240 = 1MHz (考虑×2倍频)
+    htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+    htim6.Init.Period = 0xFFFF;
+    htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    
+    HAL_TIM_Base_Init(&htim6);
+}
+
+static void delay_ms_precise(uint32_t ms) {
+    uint32_t target_count = ms ;  // 1MHz时钟，1ms = 1000计数
+    
+    __HAL_TIM_SET_COUNTER(&htim6, 0);
+    HAL_TIM_Base_Start(&htim6);
+    
+    while (__HAL_TIM_GET_COUNTER(&htim6) < target_count) {
+        
+    }
+    
+    HAL_TIM_Base_Stop(&htim6);
+}
 
 __attribute__((section(".ram_buffers"))) static StaticImageFrame_t g_imageBuffers[MAX_QUEUE_SIZE];
 static ImageQueueControl_t g_imageQueueControl = {0};
@@ -11,24 +41,20 @@ static TaskHandle_t g_imageQueueTaskHandle = NULL;
 void ImageQueue_Task(void *argument)
 {
     (void)argument; 
-    QueueItem_t queueItem;  // 只有3字节，安全
-    static TickType_t lastFrameStartTime = 0;  // 记录上一帧开始时间
-    const TickType_t frameInterval = pdMS_TO_TICKS(4);  // 4ms帧间隔
+    QueueItem_t queueItem;  //只有3字节，队列bufferIndex和size   他的data是无效的
+    
+    TIM6_Init();
     for (;;) {
-      
         if (xQueueReceive(g_imageQueueControl.imageQueue, &queueItem, portMAX_DELAY) == pdTRUE) {
             //获取对应的静态缓冲区，的bufferIndex位置
             StaticImageFrame_t* frame = &g_imageBuffers[queueItem.bufferIndex];
             HAL_StatusTypeDef status = Handler_SPI_Transmit(SPI_INDEX_1, frame->data, NULL, queueItem.size, 1000);
             frame->inUse = 0;
             frame->valid = 0;
+            delay_ms_precise(5000);
         }
     }
 }
-
-/**
- * @brief 查找空闲缓冲区
- */
 
 static int8_t FindFreeBuffer(void)
 {
@@ -40,30 +66,33 @@ static int8_t FindFreeBuffer(void)
     return -1;
 }
 
-// ============ 零拷贝相关接口实现 ============
-
-
+//获取使用中的缓冲区数量 如果为0就代表里面的数据是空的，这个时候就可以抬笔
+uint8_t ImageQueue_GetBufferUsage(void)
+{
+    if (g_imageQueueControl.imageQueue == NULL) {
+        return 0;
+    }
+    uint8_t inUseCount = 0;
+    for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
+        if (g_imageBuffers[i].inUse) {
+            inUseCount++;
+        }
+    }
+    return inUseCount;
+}
 int8_t ImageQueue_AllocateBuffer(void)
 {
     if (g_imageQueueControl.imageQueue == NULL) {
         return -1;
     }
-
     int8_t bufferIndex = FindFreeBuffer();
     if (bufferIndex >= 0) {
-        // 标记缓冲区为使用中，但尚未有效
         g_imageBuffers[bufferIndex].inUse = 1;
         g_imageBuffers[bufferIndex].valid = 0;
         g_imageBuffers[bufferIndex].size = 0;
     }
     return bufferIndex;
 }
-
-/**
- * @brief 获取缓冲区数据指针（零拷贝接口）
- * @param bufferIndex 缓冲区索引
- * @return uint8_t* 缓冲区数据指针，NULL表示无效索引
- */
 uint8_t* ImageQueue_GetBufferPtr(int8_t bufferIndex)
 {
     if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
@@ -76,13 +105,6 @@ uint8_t* ImageQueue_GetBufferPtr(int8_t bufferIndex)
     
     return g_imageBuffers[bufferIndex].data;
 }
-
-/**
- * @brief 提交缓冲区到队列（零拷贝接口）
- * @param bufferIndex 缓冲区索引
- * @param size 实际数据大小
- * @return HAL_StatusTypeDef 返回状态
- */
 HAL_StatusTypeDef ImageQueue_CommitBuffer(int8_t bufferIndex, uint16_t size)
 {
     if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
@@ -109,30 +131,18 @@ HAL_StatusTypeDef ImageQueue_CommitBuffer(int8_t bufferIndex, uint16_t size)
         return HAL_BUSY;
     }
 }
-
-/**
- * @brief 释放缓冲区（零拷贝接口）
- * @param bufferIndex 缓冲区索引
- * @return HAL_StatusTypeDef 返回状态
- */
 HAL_StatusTypeDef ImageQueue_ReleaseBuffer(int8_t bufferIndex)
 {
     if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
         return HAL_ERROR;
     }
     
-    // 释放缓冲区
     g_imageBuffers[bufferIndex].inUse = 0;
     g_imageBuffers[bufferIndex].valid = 0;
     g_imageBuffers[bufferIndex].size = 0;
     
     return HAL_OK;
 }
-
-/**
- * @brief 获取队列状态（返回队列中的帧数量）
- * @return uint8_t 队列中的帧数量
- */
 uint8_t ImageQueue_GetStatus(void)
 {
     if (g_imageQueueControl.imageQueue == NULL) {
@@ -141,10 +151,7 @@ uint8_t ImageQueue_GetStatus(void)
     return (uint8_t)uxQueueMessagesWaiting(g_imageQueueControl.imageQueue);
 }
 
-/**
- * @brief 启动队列处理
- * @return HAL_StatusTypeDef 返回状态
- */
+
 HAL_StatusTypeDef ImageQueue_Start(void)
 {
     if (xSemaphoreTake(g_imageQueueControl.queueMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
@@ -152,15 +159,14 @@ HAL_StatusTypeDef ImageQueue_Start(void)
         g_imageQueueControl.totalReceived = 0;
         g_imageQueueControl.totalProcessed = 0;
         g_imageQueueControl.droppedFrames = 0;
-        
         // 清空队列和静态缓冲区
+        //重置队列状态
         xQueueReset(g_imageQueueControl.imageQueue);
         for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
             g_imageBuffers[i].inUse = 0;
             g_imageBuffers[i].valid = 0;
             g_imageBuffers[i].size = 0;
         }
-        // 状态管理已简化，无需设置运行状态
         xSemaphoreGive(g_imageQueueControl.queueMutex);
         return HAL_OK;
     }
@@ -168,16 +174,10 @@ HAL_StatusTypeDef ImageQueue_Start(void)
 }
 
 
-/**
- * @brief 清理图像队列系统资源
- * @return HAL_StatusTypeDef 返回状态
- * @note 用于系统关闭时的资源清理
- */
+
 HAL_StatusTypeDef ImageQueue_DeInit(void)
 {
-    // 状态管理已简化，直接清理资源
-    
-    // 删除任务
+
     if (g_imageQueueTaskHandle != NULL) {
         vTaskDelete(g_imageQueueTaskHandle);
         g_imageQueueTaskHandle = NULL;
@@ -205,10 +205,6 @@ HAL_StatusTypeDef ImageQueue_DeInit(void)
     return HAL_OK;
 }
 
-/**
- * @brief 初始化图像队列系统
- * @return HAL_StatusTypeDef 返回状态
- */
 HAL_StatusTypeDef ImageQueue_Init(void)
 {
     // 初始化静态缓冲区

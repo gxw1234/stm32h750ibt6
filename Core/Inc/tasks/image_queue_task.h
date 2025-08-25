@@ -38,12 +38,11 @@ typedef struct {
     uint32_t droppedFrames;         // 丢弃的帧数
 } ImageQueueControl_t;
 
-
-
+// 缓冲区状态查询
+uint8_t ImageQueue_GetBufferUsage(void);
 
 HAL_StatusTypeDef ImageQueue_Init(void);  // 改为返回状态
 void ImageQueue_Task(void *argument);
-
 
 // 零拷贝相关接口
 int8_t ImageQueue_AllocateBuffer(void);  // 分配空闲缓冲区，返回索引

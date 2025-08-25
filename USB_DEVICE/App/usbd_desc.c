@@ -66,7 +66,7 @@
 #define USBD_LANGID_STRING     1033
 #define USBD_MANUFACTURER_STRING     "listenai"
 #define USBD_PID_HS     0xAABB
-#define USBD_PRODUCT_STRING_HS     "GXW"
+#define USBD_PRODUCT_STRING_HS     "Smart_USB"
 #define USBD_CONFIGURATION_STRING_HS     "WINUSB Config"
 #define USBD_INTERFACE_STRING_HS     "WINUSB Interface"
 

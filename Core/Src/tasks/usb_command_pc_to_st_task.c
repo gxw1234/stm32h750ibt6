@@ -101,7 +101,6 @@ void usb_command_pc_to_st_task(void *argument)
                                     continue;
                                 }
                             } else {
-
                                 memcpy(big_buffer, usbData.Buf, usbData.Length);
                             }
                             received_length = usbData.Length;
