@@ -207,16 +207,19 @@ int main(void)
   /*创建MP8865线程 */
   // xTaskCreate(MP8865_Task, "MP8865Task", configMINIMAL_STACK_SIZE * 4, NULL, 2, &mp8865TaskHandle);
   
-  // /*摄像头IIC中断线程
-  //   线程优先级设置为4
-  // 用于摄像头数据接收 */
-  xTaskCreate(IIC_interruption_Task, "IIC_interruption_TaskHandle", configMINIMAL_STACK_SIZE * 2, NULL,4, &IIC_interruption_TaskHandle);
+  /*摄像头IIC中断线程
+    线程优先级设置为4
+  用于摄像头数据接收 
+  */
+
+  xTaskCreate(IIC_interruption_Task, "IIC_interruption_TaskHandle", configMINIMAL_STACK_SIZE * 2, NULL,6, &IIC_interruption_TaskHandle);
 
   /*创建USB命令处理线程
   接收USB数据并解析
   线程优先级设置为7
   */
-  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 6, &UsbCmdTaskHandle);  
+
+  xTaskCreate(usb_command_pc_to_st_task, "UsbCmdTask", configMINIMAL_STACK_SIZE * 4, NULL, 5, &UsbCmdTaskHandle);  
 
 
   // /*创建调试线程 */

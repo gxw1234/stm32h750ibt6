@@ -64,7 +64,7 @@
 #define configCPU_CLOCK_HZ                       ( SystemCoreClock ) // CPU时钟
 
 #define configTICK_RATE_HZ                       ((TickType_t)480)  // 时钟频率
-#define configMAX_PRIORITIES                     ( 7 )   // 最高优先级16
+#define configMAX_PRIORITIES                     ( 7 )   // 最高优先级7
 #define configMINIMAL_STACK_SIZE                 ((uint16_t)128)  // 最小栈大小
 #define configTOTAL_HEAP_SIZE                    ((size_t)65536)  // 总堆大小
 #define configMAX_TASK_NAME_LEN                  ( 16 )

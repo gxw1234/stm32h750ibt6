@@ -32,12 +32,11 @@ static void WaitForSPITransmissionComplete(void)
             spi_transfer_complete = 1;
         }
     }
-    
     if(spi_error_code != HAL_SPI_ERROR_NONE) {
         spi_error_code = 0;
     }
-    
     spi_transfer_complete = 0;
+    
 }
 
 /**Sindex 1:SPI5   对应的引脚是PH6,PH7,PF11,H8

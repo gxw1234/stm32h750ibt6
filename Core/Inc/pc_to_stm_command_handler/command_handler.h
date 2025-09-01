@@ -6,6 +6,8 @@
 #include <string.h>
 #include <stdio.h>
 
+
+//PC发送ST接收
 // 协议类型定义  protocol_type
 #define PROTOCOL_SPI        0x01    
 #define PROTOCOL_IIC        0x02    
@@ -15,7 +17,7 @@
 #define PROTOCOL_RESETSTM32      0x06    
 #define PROTOCOL_BOOTLOADER_WRITE_BYTES    0x07    
 #define PROTOCOL_GET_FIRMWARE_INFO    0x08    
-
+#define PROTOCOL_STATUS    0x09    // 专用状态响应协议
 
 //------------cmd_id以下都是命令ID-------------------------
 
@@ -60,6 +62,23 @@
 #define POWER_CHANNEL_1         0x01  // 电源通道1
 #define POWER_CHANNEL_UA        0x02  // 微安电流通道
 #define POWER_CHANNEL_MA        0x03  // 毫安电流通道
+
+
+
+
+
+//ST发送PC接收
+// 协议类型定义  protocol_type
+#define PROTOCOL_WRITE_STATUS  0x01    //写状态
+
+
+//CMD_ID
+#define GET_STATUS 01
+
+
+
+
+
 
 
 // 通用命令包头结构

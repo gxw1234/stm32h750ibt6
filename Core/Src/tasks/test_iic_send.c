@@ -54,7 +54,6 @@ HAL_StatusTypeDef Test_I2C3_Slave_Init(void)
     {
         Error_Handler();
     }
-
     if (HAL_I2CEx_ConfigAnalogFilter(&hi2c3_test_, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
     {
       Error_Handler();
@@ -76,6 +75,9 @@ HAL_StatusTypeDef Test_I2C3_Slave_Init(void)
  */
 void IIC_interruption_Task(void *argument)
 {
+
+    printf("[I2C] Task stack address: 0x%08X\r\n", (uint32_t)&argument);
+    
     HAL_StatusTypeDef status = HAL_ERROR;
     /* Prevent compiler warning for unused argument */
     (void)argument;
@@ -115,22 +117,20 @@ void IIC_interruption_Task(void *argument)
 
     while (1)
     {
-        if (IIC_complete_semaphore != NULL) {
-            if (xSemaphoreTake(IIC_complete_semaphore, pdMS_TO_TICKS(100)) == pdTRUE) {
-                while (HAL_I2C_GetState(&hi2c3_test_) != HAL_I2C_STATE_READY){}
-                HAL_I2C_EnableListen_IT(&hi2c3_test_);
+        if (xSemaphoreTake(IIC_complete_semaphore, portMAX_DELAY) == pdTRUE) {
+            while (HAL_I2C_GetState(&hi2c3_test_) != HAL_I2C_STATE_READY){
+                // vTaskDelay(pdMS_TO_TICKS(1)); 
             }
-        }
-
+            HAL_I2C_EnableListen_IT(&hi2c3_test_);
+        } 
         if (IIC_print_semaphore != NULL) {
             if (xSemaphoreTake(IIC_print_semaphore, pdMS_TO_TICKS(10)) == pdTRUE) {
                 typedef struct {
                     GENERIC_CMD_HEADER header;
                     uint8_t status;  
                 } Scan_gpio_Response;
-                
                 Scan_gpio_Response response;
-                response.header.protocol_type = PROTOCOL_SPI;
+                response.header.protocol_type = PROTOCOL_STATUS;
                 response.header.cmd_id = GPIO_SCAN_MODE_WRITE;
                 response.header.device_index = 1;
                 response.header.param_count = 0;
@@ -138,10 +138,6 @@ void IIC_interruption_Task(void *argument)
                 response.header.total_packets = sizeof(Scan_gpio_Response);
                 response.status = 0;
                 USB_Sender((uint8_t*)&response, sizeof(response));
-                
-                
-
-
             }
         }
     }

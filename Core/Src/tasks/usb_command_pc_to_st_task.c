@@ -9,7 +9,10 @@
 #define CMD_END_MARKER      0xA5A5A5A5
 #define FRAME_START_MARKER  0x5A5A5A5A 
 #define BIG_BUFFER_SIZE (1024)  
+
+
 static uint8_t big_buffer[BIG_BUFFER_SIZE] ;
+
 
 typedef enum {
     WAITING_FOR_HEADER,     
@@ -36,7 +39,7 @@ static void send_queue_write_response(uint8_t status)
         uint8_t status;  // 状态数据
     } Queue_Write_Response;
     Queue_Write_Response response;
-    response.header.protocol_type = PROTOCOL_SPI;
+    response.header.protocol_type = PROTOCOL_STATUS;
     response.header.cmd_id = CMD_QUEUE_WRITE;
     response.header.device_index = 0;
     response.header.param_count = 0;
@@ -51,12 +54,22 @@ void usb_command_pc_to_st_task(void *argument)
 {
     memset(big_buffer, 0, BIG_BUFFER_SIZE);
     // 100*512=51200/96*240=2   可以存两张图
-    usbMessageQueueHandle = xQueueCreate(100, sizeof(USB_Data_TypeDef));
+    // usbMessageQueueHandle = xQueueCreate(100, sizeof(USB_Data_TypeDef));
+    // if (usbMessageQueueHandle == NULL) {
+    //     printf("Queue create failed!\r\n");
+    //     vTaskDelete(NULL);
+    //     return;
+    // }
+
+
+    printf("Free heap before queue create: %d bytes\r\n", xPortGetFreeHeapSize());
+    usbMessageQueueHandle = xQueueCreate(50, sizeof(USB_Data_TypeDef));
     if (usbMessageQueueHandle == NULL) {
-        printf("Queue create failed!\r\n");
-        vTaskDelete(NULL);
-        return;
+        printf("Queue create failed! Free heap: %d bytes\r\n", xPortGetFreeHeapSize());
     }
+    printf("Free heap after queue create: %d bytes\r\n", xPortGetFreeHeapSize());
+
+
     USB_Data_TypeDef usbData;
     while (1) {
         if (xQueueReceive(usbMessageQueueHandle, &usbData, portMAX_DELAY) == pdPASS) {

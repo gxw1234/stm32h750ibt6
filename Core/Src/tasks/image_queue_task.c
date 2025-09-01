@@ -42,7 +42,6 @@ void ImageQueue_Task(void *argument)
 {
     (void)argument; 
     QueueItem_t queueItem;  //只有3字节，队列bufferIndex和size   他的data是无效的
-    
     TIM6_Init();
     for (;;) {
         if (xQueueReceive(g_imageQueueControl.imageQueue, &queueItem, portMAX_DELAY) == pdTRUE) {
@@ -136,7 +135,6 @@ HAL_StatusTypeDef ImageQueue_ReleaseBuffer(int8_t bufferIndex)
     if (bufferIndex < 0 || bufferIndex >= MAX_QUEUE_SIZE) {
         return HAL_ERROR;
     }
-    
     g_imageBuffers[bufferIndex].inUse = 0;
     g_imageBuffers[bufferIndex].valid = 0;
     g_imageBuffers[bufferIndex].size = 0;
@@ -155,12 +153,9 @@ uint8_t ImageQueue_GetStatus(void)
 HAL_StatusTypeDef ImageQueue_Start(void)
 {
     if (xSemaphoreTake(g_imageQueueControl.queueMutex, pdMS_TO_TICKS(500)) == pdTRUE) {
-        // 启动前先重置统计信息
         g_imageQueueControl.totalReceived = 0;
         g_imageQueueControl.totalProcessed = 0;
         g_imageQueueControl.droppedFrames = 0;
-        // 清空队列和静态缓冲区
-        //重置队列状态
         xQueueReset(g_imageQueueControl.imageQueue);
         for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
             g_imageBuffers[i].inUse = 0;
@@ -177,68 +172,50 @@ HAL_StatusTypeDef ImageQueue_Start(void)
 
 HAL_StatusTypeDef ImageQueue_DeInit(void)
 {
-
     if (g_imageQueueTaskHandle != NULL) {
         vTaskDelete(g_imageQueueTaskHandle);
         g_imageQueueTaskHandle = NULL;
         printf("Image queue task deleted\r\n");
     }
-    
-    // 清理队列
     if (g_imageQueueControl.imageQueue != NULL) {
         vQueueDelete(g_imageQueueControl.imageQueue);
         g_imageQueueControl.imageQueue = NULL;
         printf("Image queue deleted\r\n");
     }
-    
-    // 清理互斥锁
     if (g_imageQueueControl.queueMutex != NULL) {
         vSemaphoreDelete(g_imageQueueControl.queueMutex);
         g_imageQueueControl.queueMutex = NULL;
         printf("Image queue mutex deleted\r\n");
     }
-    
-    // 重置控制结构
     memset(&g_imageQueueControl, 0, sizeof(ImageQueueControl_t));
-    
     printf("Image queue system deinitialized\r\n");
     return HAL_OK;
 }
 
 HAL_StatusTypeDef ImageQueue_Init(void)
 {
-    // 初始化静态缓冲区
     for (int i = 0; i < MAX_QUEUE_SIZE; i++) {
         g_imageBuffers[i].inUse = 0;
         g_imageBuffers[i].valid = 0;
         g_imageBuffers[i].size = 0;
     }
-
-    // 创建小队列（每项只有3字节）
     g_imageQueueControl.imageQueue = xQueueCreate(MAX_QUEUE_SIZE, sizeof(QueueItem_t));
     if (g_imageQueueControl.imageQueue == NULL) {
         printf("Failed to create image queue\r\n");
         return HAL_ERROR;
     }
-
     printf("Image queue created successfully\r\n");
-
-    // 创建互斥锁
     g_imageQueueControl.queueMutex = xSemaphoreCreateMutex();
     if (g_imageQueueControl.queueMutex == NULL) {
         printf("Failed to create queue mutex\r\n");
         return HAL_ERROR;
     }
-
-    // 初始化统计信息
     g_imageQueueControl.totalReceived = 0;
     g_imageQueueControl.totalProcessed = 0;
     g_imageQueueControl.droppedFrames = 0;
-
-    // 创建任务
     BaseType_t result = xTaskCreate(
         ImageQueue_Task, "ImageQueueTask", 
-        1024, NULL, 5, &g_imageQueueTaskHandle
+        configMINIMAL_STACK_SIZE * 4, NULL, 5, &g_imageQueueTaskHandle
     );
     if (result != pdPASS) {
         printf("Failed to create image queue task\r\n");

@@ -147,19 +147,26 @@ static void Process_SPI_Queue_Status(uint8_t spi_index) {
    
     // uint8_t queue_count = ImageQueue_GetStatus();
     uint8_t queue_count = ImageQueue_GetBufferUsage();
+    
     typedef struct {
         GENERIC_CMD_HEADER header;
         uint8_t queue_status;  
     } Queue_Status_Response;
     Queue_Status_Response response;
-    response.header.protocol_type = PROTOCOL_SPI;        // SPI协议
-    response.header.cmd_id = CMD_READ;           // 队列状态命令
+    response.header.protocol_type = PROTOCOL_STATUS;        // SPI协议
+    response.header.cmd_id = CMD_QUEUE_STATUS;           // 队列状态命令
     response.header.device_index = spi_index;            // 使用传入的索引
     response.header.param_count = 0;                     // 无参数
     response.header.data_len = sizeof(uint8_t);          // 数据长度1字节
     response.header.total_packets = sizeof(Queue_Status_Response);  // 总包大小
     response.queue_status = queue_count;
+    
     uint8_t ret = USB_Sender((uint8_t*)&response, sizeof(response));
+    // if (ret == 0) {
+    //     printf("0\r\n");
+    // } else {
+    //     printf("1\r\n");
+    // }
 }
 
 
